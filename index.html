@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Finance">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Finance</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================
+   FINANCE APP — Etapa 1
+   Design: Minimalista (Apple/Notion)
+   ========================================= */
+
+:root {
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter Tight', -apple-system, sans-serif;
+
+  --space-1: 4px; --space-2: 8px; --space-3: 12px;
+  --space-4: 16px; --space-5: 24px; --space-6: 32px;
+  --space-7: 48px; --space-8: 64px;
+
+  --radius-sm: 8px; --radius-md: 12px;
+  --radius-lg: 16px; --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration: 200ms;
+}
+
+/* Tema escuro (padrão) */
+:root, [data-theme="dark"] {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #141414;
+  --bg-tertiary: #1c1c1c;
+  --bg-elevated: #242424;
+  --bg-hover: #2a2a2a;
+  --text-primary: #f5f5f5;
+  --text-secondary: #a8a8a8;
+  --text-tertiary: #6b6b6b;
+  --text-disabled: #404040;
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-default: rgba(255,255,255,0.1);
+  --border-strong: rgba(255,255,255,0.15);
+  --success: #4ade80;
+  --danger: #f87171;
+  --warning: #fbbf24;
+  --info: #60a5fa;
+  --pv-color: #60a5fa;
+  --gigi-color: #f472b6;
+  --shared-color: #a78bfa;
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.5);
+}
+
+[data-theme="light"] {
+  --bg-primary: #fafaf9;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f5f5f4;
+  --bg-elevated: #ffffff;
+  --bg-hover: #f0f0ef;
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-tertiary: #a1a1aa;
+  --text-disabled: #d4d4d8;
+  --border-subtle: rgba(0,0,0,0.05);
+  --border-default: rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.12);
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --info: #2563eb;
+  --pv-color: #2563eb;
+  --gigi-color: #db2777;
+  --shared-color: #7c3aed;
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.12);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow-x: hidden; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+}
+button, input { font-family: inherit; color: inherit; }
+button { background: none; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+input { background: none; border: none; outline: none; }
+
+/* Tipografia */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.text-display { font-family: var(--font-display); letter-spacing: -0.03em; }
+.text-mono { font-variant-numeric: tabular-nums; }
+
+/* ========== TELAS ========== */
+.screen { display: none; min-height: 100vh; min-height: 100dvh; }
+.screen.active { display: flex; }
+
+/* ========== LOGIN ========== */
+#screen-login {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  position: relative;
+  overflow: hidden;
+}
+#screen-login::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: radial-gradient(circle at 30% 20%, var(--bg-tertiary) 0%, transparent 50%);
+  pointer-events: none;
+}
+.login-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+}
+.login-logo {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  margin-bottom: var(--space-1);
+}
+.login-tagline {
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  margin-bottom: var(--space-7);
+}
+
+.user-select {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  justify-content: center;
+}
+.user-option {
+  flex: 1;
+  max-width: 140px;
+  padding: var(--space-5) var(--space-3);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  transition: all var(--duration) var(--ease);
+}
+.user-option:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+.user-option.selected {
+  border-color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+.user-option-avatar {
+  width: 48px; height: 48px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: white;
+}
+.user-option-avatar.pv { background: var(--pv-color); }
+.user-option-avatar.gigi { background: var(--gigi-color); }
+.user-option-name { font-size: 0.875rem; font-weight: 500; }
+
+.pin-input-wrapper {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  margin-bottom: var(--space-5);
+}
+.pin-digit {
+  width: 56px; height: 64px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: all var(--duration) var(--ease);
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+.pin-digit:focus {
+  border-color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+.pin-digit.filled { border-color: var(--border-strong); }
+.login-error {
+  color: var(--danger);
+  font-size: 0.875rem;
+  margin-bottom: var(--space-4);
+  min-height: 1.25rem;
+  opacity: 0;
+  transition: opacity var(--duration);
+}
+.login-error.visible { opacity: 1; }
+.login-hint {
+  color: var(--text-tertiary);
+  font-size: 0.8125rem;
+  margin-top: var(--space-5);
+}
+.btn-ghost {
+  color: var(--text-secondary);
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.875rem;
+  transition: color var(--duration);
+}
+.btn-ghost:hover { color: var(--text-primary); }
+
+/* ========== APP SHELL ========== */
+#screen-app {
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  background: var(--bg-primary);
+  width: 100%;
+}
+@media (min-width: 768px) {
+  #screen-app {
+    max-width: 520px;
+    border-left: 1px solid var(--border-subtle);
+    border-right: 1px solid var(--border-subtle);
+  }
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  background: var(--bg-primary);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.app-header h1 { font-size: 1.75rem; font-weight: 500; }
+
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  transition: background var(--duration) var(--ease);
+}
+.user-badge:hover { background: var(--bg-hover); }
+.user-avatar {
+  width: 24px; height: 24px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+}
+.user-avatar.pv { background: var(--pv-color); }
+.user-avatar.gigi { background: var(--gigi-color); }
+.user-name { font-size: 0.875rem; font-weight: 500; }
+
+.theme-toggle {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all var(--duration) var(--ease);
+}
+.theme-toggle:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.theme-toggle svg { width: 18px; height: 18px; }
+
+.app-content {
+  flex: 1;
+  padding: var(--space-4) var(--space-5) calc(80px + var(--space-5));
+  overflow-y: auto;
+  width: 100%;
+}
+
+/* Cards */
+.card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  transition: border-color var(--duration) var(--ease);
+}
+.card:hover { border-color: var(--border-default); }
+.card-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-3);
+}
+.card-value {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* FAB */
+.fab {
+  position: fixed;
+  bottom: calc(80px + var(--space-3) + env(safe-area-inset-bottom));
+  right: var(--space-5);
+  width: 56px; height: 56px;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  z-index: 15;
+  transition: transform var(--duration) var(--ease);
+}
+.fab:hover { transform: scale(1.05); }
+.fab:active { transform: scale(0.95); }
+.fab svg { width: 24px; height: 24px; stroke-width: 2; }
+
+/* Bottom nav */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-around;
+  padding: var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom));
+  z-index: 20;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+@media (min-width: 768px) {
+  .bottom-nav { max-width: 520px; }
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-2);
+  color: var(--text-tertiary);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: color var(--duration) var(--ease);
+  position: relative;
+}
+.nav-item:hover { color: var(--text-secondary); }
+.nav-item.active { color: var(--text-primary); }
+.nav-item svg { width: 22px; height: 22px; stroke-width: 1.75; }
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2px;
+  background: var(--text-primary);
+  border-radius: var(--radius-full);
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: var(--space-8) var(--space-5);
+  color: var(--text-tertiary);
+}
+.empty-state-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+.empty-state-text {
+  font-size: 0.875rem;
+  max-width: 280px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+.fade-in { animation: fadeIn 400ms var(--ease-out) backwards; }
+.fade-in:nth-child(1) { animation-delay: 0ms; }
+.fade-in:nth-child(2) { animation-delay: 80ms; }
+.fade-in:nth-child(3) { animation-delay: 160ms; }
+.fade-in:nth-child(4) { animation-delay: 240ms; }
+.shake { animation: shake 300ms var(--ease); }
+
+/* Utilitários */
+.flex { display: flex; }
+.items-center { align-items: center; }
+.gap-2 { gap: var(--space-2); }
+.gap-3 { gap: var(--space-3); }
+.gap-4 { gap: var(--space-4); }
+.mb-3 { margin-bottom: var(--space-3); }
+.mb-4 { margin-bottom: var(--space-4); }
+.mb-5 { margin-bottom: var(--space-5); }
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
+
+::-webkit-scrollbar { width: 0; }
+html { scroll-behavior: smooth; }
+</style>
+</head>
+<body>
+
+<!-- ============================================
+     TELA DE LOGIN
+     ============================================ -->
+<div class="screen" id="screen-login">
+  <div class="login-content">
+    <h1 class="login-logo fade-in">Finance</h1>
+    <p class="login-tagline fade-in">Personal · Shared · Simple</p>
+
+    <div class="user-select fade-in" id="user-select">
+      <button class="user-option" data-user="pv">
+        <div class="user-option-avatar pv">P</div>
+        <span class="user-option-name">PV</span>
+      </button>
+      <button class="user-option" data-user="gigi">
+        <div class="user-option-avatar gigi">G</div>
+        <span class="user-option-name">Gigi</span>
+      </button>
+    </div>
+
+    <div id="pin-section" style="display:none;" class="fade-in">
+      <div class="pin-input-wrapper" id="pin-input">
+        <input type="tel" class="pin-digit" maxlength="1" inputmode="numeric" autocomplete="off">
+        <input type="tel" class="pin-digit" maxlength="1" inputmode="numeric" autocomplete="off">
+        <input type="tel" class="pin-digit" maxlength="1" inputmode="numeric" autocomplete="off">
+        <input type="tel" class="pin-digit" maxlength="1" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="login-error" id="login-error"></div>
+      <button class="btn-ghost" id="back-btn">← Trocar usuário</button>
+    </div>
+
+    <p class="login-hint fade-in" id="hint-text">Selecione seu perfil pra continuar</p>
+  </div>
+</div>
+
+<!-- ============================================
+     APP PRINCIPAL
+     ============================================ -->
+<div class="screen" id="screen-app">
+  <header class="app-header fade-in">
+    <h1 class="text-display">Finance</h1>
+    <div class="flex items-center gap-2">
+      <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema">
+        <svg id="theme-icon" viewBox="0 0 24 24" fill="none"></svg>
+      </button>
+      <button class="user-badge" id="user-badge" aria-label="Usuário (segure pra sair)"></button>
+    </div>
+  </header>
+
+  <main class="app-content">
+    <div class="card mb-4 fade-in">
+      <div class="card-title">Saldo total</div>
+      <div class="card-value text-mono" id="balance-total">$0.00</div>
+      <div class="flex gap-4 mb-3" style="margin-top: var(--space-4);">
+        <div>
+          <div class="card-title" style="margin-bottom:4px;">Entradas</div>
+          <div class="text-mono text-success" style="font-size:1.125rem;font-weight:500;">+$0.00</div>
+        </div>
+        <div>
+          <div class="card-title" style="margin-bottom:4px;">Saídas</div>
+          <div class="text-mono text-danger" style="font-size:1.125rem;font-weight:500;">-$0.00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-3 mb-5 fade-in" style="margin-top: var(--space-5);">
+      <div class="card" style="flex:1;padding:var(--space-4);">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="user-avatar pv" style="width:20px;height:20px;font-size:0.625rem;">P</div>
+          <span style="font-size:0.8125rem;font-weight:500;">PV</span>
+        </div>
+        <div class="text-mono text-display" style="font-size:1.25rem;font-weight:500;">$0.00</div>
+      </div>
+      <div class="card" style="flex:1;padding:var(--space-4);">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="user-avatar gigi" style="width:20px;height:20px;font-size:0.625rem;">G</div>
+          <span style="font-size:0.8125rem;font-weight:500;">Gigi</span>
+        </div>
+        <div class="text-mono text-display" style="font-size:1.25rem;font-weight:500;">$0.00</div>
+      </div>
+    </div>
+
+    <div class="empty-state fade-in">
+      <div class="empty-state-title">Bem-vindo ao seu app</div>
+      <p class="empty-state-text">
+        Estrutura pronta. Nas próximas etapas vamos adicionar transações, cartões, calendário e muito mais.
+      </p>
+    </div>
+  </main>
+
+  <button class="fab" id="fab-add" aria-label="Adicionar transação">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </button>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-page="dashboard">
+      <svg viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="7" height="9" rx="1" stroke="currentColor"/>
+        <rect x="14" y="3" width="7" height="5" rx="1" stroke="currentColor"/>
+        <rect x="14" y="12" width="7" height="9" rx="1" stroke="currentColor"/>
+        <rect x="3" y="16" width="7" height="5" rx="1" stroke="currentColor"/>
+      </svg>
+      <span>Home</span>
+    </button>
+    <button class="nav-item" data-page="transactions">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M7 8h10M7 8l3-3m-3 3l3 3M17 16H7m10 0l-3-3m3 3l-3 3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Transações</span>
+    </button>
+    <button class="nav-item" data-page="cards">
+      <svg viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor"/>
+        <path d="M3 10h18" stroke="currentColor"/>
+      </svg>
+      <span>Cartões</span>
+    </button>
+    <button class="nav-item" data-page="calendar">
+      <svg viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor"/>
+        <path d="M8 3v4M16 3v4M3 10h18" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+      <span>Calendário</span>
+    </button>
+    <button class="nav-item" data-page="settings">
+      <svg viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="3" stroke="currentColor"/>
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Config</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Supabase via CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+/* ============================================
+   CONFIG SUPABASE
+   ============================================
+   Cole abaixo as credenciais do seu projeto.
+   Por enquanto pode deixar como está — o app
+   roda em modo local com PINs de fallback.
+*/
+const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
+
+const isSupabaseReady = SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE' &&
+                        SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY_HERE';
+
+let db = null;
+if (isSupabaseReady && window.supabase) {
+  db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true }
+  });
+}
+
+/* ============================================
+   AUTH — Login com PIN
+   ============================================ */
+const STORAGE_KEY = 'finance_app_session';
+
+// PINs de fallback (modo local antes do Supabase)
+const FALLBACK_USERS = {
+  pv:   { id: 'pv',   name: 'PV',   pin: '1234', color: 'pv'   },
+  gigi: { id: 'gigi', name: 'Gigi', pin: '5678', color: 'gigi' },
+};
+
+const Auth = {
+  setSession(user) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      userId: user.id, name: user.name, color: user.color, loggedAt: Date.now(),
+    }));
+  },
+  getSession() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); }
+    catch { return null; }
+  },
+  isLoggedIn() { return this.getSession() !== null; },
+  logout() {
+    localStorage.removeItem(STORAGE_KEY);
+    showScreen('login');
+    resetLoginUI();
+  },
+  async login(userId, pin) {
+    // Tenta Supabase primeiro
+    if (db) {
+      try {
+        const { data, error } = await db.from('users')
+          .select('*').eq('id', userId).eq('pin', pin).single();
+        if (!error && data) {
+          this.setSession(data);
+          return { success: true, user: data };
+        }
+      } catch (e) { console.warn('Supabase off, usando fallback'); }
+    }
+    // Fallback local
+    const user = FALLBACK_USERS[userId];
+    if (user && user.pin === pin) {
+      this.setSession(user);
+      return { success: true, user };
+    }
+    return { success: false, error: 'PIN incorreto' };
+  },
+};
+
+/* ============================================
+   APP — Tema, formatação, navegação
+   ============================================ */
+const App = {
+  initTheme() {
+    const saved = localStorage.getItem('theme') || 'dark';
+    this.setTheme(saved);
+  },
+  setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    this.updateThemeIcon(theme);
+  },
+  toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    this.setTheme(current === 'dark' ? 'light' : 'dark');
+  },
+  updateThemeIcon(theme) {
+    const icon = document.getElementById('theme-icon');
+    if (!icon) return;
+    icon.innerHTML = theme === 'dark'
+      ? '<path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'
+      : '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>';
+  },
+  formatCurrency(value) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency', currency: 'USD',
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    }).format(Number(value) || 0);
+  },
+  renderUserBadge() {
+    const user = Auth.getSession();
+    if (!user) return;
+    const badge = document.getElementById('user-badge');
+    if (!badge) return;
+    badge.innerHTML = `
+      <div class="user-avatar ${user.color}">${user.name.charAt(0).toUpperCase()}</div>
+      <span class="user-name">${user.name}</span>
+    `;
+  },
+};
+
+/* ============================================
+   NAVEGAÇÃO ENTRE TELAS
+   ============================================ */
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+}
+
+function resetLoginUI() {
+  selectedUser = null;
+  document.getElementById('pin-section').style.display = 'none';
+  document.getElementById('user-select').style.display = 'flex';
+  document.getElementById('hint-text').textContent = 'Selecione seu perfil pra continuar';
+  document.querySelectorAll('.pin-digit').forEach(i => { i.value = ''; i.classList.remove('filled'); });
+  document.querySelectorAll('.user-option').forEach(b => b.classList.remove('selected'));
+}
+
+/* ============================================
+   LÓGICA DA TELA DE LOGIN
+   ============================================ */
+let selectedUser = null;
+const userSelect = document.getElementById('user-select');
+const pinSection = document.getElementById('pin-section');
+const hintText = document.getElementById('hint-text');
+const errorEl = document.getElementById('login-error');
+const backBtn = document.getElementById('back-btn');
+const pinInputs = document.querySelectorAll('.pin-digit');
+
+document.querySelectorAll('.user-option').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedUser = btn.dataset.user;
+    document.querySelectorAll('.user-option').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    setTimeout(() => {
+      userSelect.style.display = 'none';
+      pinSection.style.display = 'block';
+      hintText.textContent = `Digite o PIN do ${selectedUser === 'pv' ? 'PV' : 'Gigi'}`;
+      pinInputs[0].focus();
+    }, 200);
+  });
+});
+
+backBtn.addEventListener('click', resetLoginUI);
+
+pinInputs.forEach((input, index) => {
+  input.addEventListener('input', (e) => {
+    const v = e.target.value.replace(/\D/g, '');
+    e.target.value = v;
+    if (v) {
+      e.target.classList.add('filled');
+      if (index < pinInputs.length - 1) pinInputs[index + 1].focus();
+      else tryLogin();
+    }
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !input.value && index > 0) {
+      pinInputs[index - 1].focus();
+      pinInputs[index - 1].value = '';
+      pinInputs[index - 1].classList.remove('filled');
+    }
+  });
+});
+
+async function tryLogin() {
+  const pin = Array.from(pinInputs).map(i => i.value).join('');
+  if (pin.length !== 4 || !selectedUser) return;
+  const result = await Auth.login(selectedUser, pin);
+  if (result.success) {
+    document.querySelector('#screen-login .login-content').style.transition = 'opacity 300ms';
+    document.querySelector('#screen-login .login-content').style.opacity = '0';
+    setTimeout(() => {
+      document.querySelector('#screen-login .login-content').style.opacity = '1';
+      enterApp();
+    }, 300);
+  } else {
+    errorEl.textContent = result.error;
+    errorEl.classList.add('visible');
+    pinSection.classList.add('shake');
+    setTimeout(() => pinSection.classList.remove('shake'), 300);
+    pinInputs.forEach(i => { i.value = ''; i.classList.remove('filled'); });
+    pinInputs[0].focus();
+    setTimeout(() => errorEl.classList.remove('visible'), 2500);
+  }
+}
+
+/* ============================================
+   ENTRAR NA APP
+   ============================================ */
+function enterApp() {
+  showScreen('app');
+  App.renderUserBadge();
+}
+
+document.getElementById('theme-toggle').addEventListener('click', () => App.toggleTheme());
+
+// Logout: pressionar e segurar o badge
+const badge = document.getElementById('user-badge');
+let pressTimer;
+const startPress = () => {
+  pressTimer = setTimeout(() => {
+    if (confirm('Sair da conta?')) Auth.logout();
+  }, 800);
+};
+const endPress = () => clearTimeout(pressTimer);
+badge.addEventListener('mousedown', startPress);
+badge.addEventListener('mouseup', endPress);
+badge.addEventListener('mouseleave', endPress);
+badge.addEventListener('touchstart', startPress);
+badge.addEventListener('touchend', endPress);
+
+// FAB e nav (placeholders pras próximas etapas)
+document.getElementById('fab-add').addEventListener('click', () => {
+  alert('Adicionar transação — chega na Etapa 3 🚀');
+});
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const page = item.dataset.page;
+    if (page !== 'dashboard') alert(`Tela "${page}" chega nas próximas etapas 🚧`);
+  });
+});
+
+/* ============================================
+   INICIALIZAÇÃO
+   ============================================ */
+App.initTheme();
+if (Auth.isLoggedIn()) enterApp();
+else showScreen('login');
+
+// Service worker (PWA)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
