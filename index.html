@@ -868,6 +868,246 @@ h1, h2, h3 {
   color: var(--text-primary);
 }
 
+/* Filtros de transações */
+.tx-filters {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: var(--space-1);
+}
+.tx-filters::-webkit-scrollbar { display: none; }
+.tx-filter {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all var(--duration);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.tx-filter.active {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
+}
+
+/* Resumo do mês */
+.tx-summary {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+.tx-summary-item {
+  flex: 1;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+.tx-summary-label {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.tx-summary-value {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Grupo por dia */
+.day-group {
+  margin-bottom: var(--space-5);
+}
+.day-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 var(--space-1);
+  margin-bottom: var(--space-2);
+}
+.day-label {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.day-label-secondary {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  margin-left: var(--space-2);
+  font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.day-total {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Linha de transação */
+.tx-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  cursor: pointer;
+  transition: all var(--duration) var(--ease);
+}
+.tx-row:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-default);
+}
+.tx-icon {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  background: var(--bg-tertiary);
+  flex-shrink: 0;
+}
+.tx-info { flex: 1; min-width: 0; }
+.tx-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tx-meta {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.tx-amount {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+}
+.tx-amount.income { color: var(--success); }
+.tx-amount.expense { color: var(--text-primary); }
+
+/* Botão "Mais opções" expansível */
+.more-options-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  margin: var(--space-3) 0;
+  width: 100%;
+  border: 1px dashed var(--border-default);
+  transition: all var(--duration);
+}
+.more-options-toggle:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.more-options-toggle svg {
+  width: 14px; height: 14px;
+  transition: transform var(--duration);
+}
+.more-options-toggle.expanded svg {
+  transform: rotate(180deg);
+}
+.more-options-content {
+  display: none;
+  padding-top: var(--space-2);
+}
+.more-options-content.expanded {
+  display: block;
+  animation: fadeIn 240ms var(--ease-out);
+}
+
+/* Numpad/teclado nativo: melhorar input de valor */
+.amount-input {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 500;
+  text-align: center;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  padding: var(--space-3);
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+.amount-input::placeholder { color: var(--text-disabled); }
+
+/* Picker grid (categorias / contas) */
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.picker-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: all var(--duration);
+  cursor: pointer;
+  text-align: center;
+}
+.picker-item:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-default);
+}
+.picker-item.selected {
+  background: var(--bg-tertiary);
+  border-color: var(--text-primary);
+}
+.picker-emoji { font-size: 1.5rem; }
+.picker-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+.picker-item.selected .picker-label { color: var(--text-primary); }
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -1076,10 +1316,16 @@ html { scroll-behavior: smooth; }
     </section>
 
     <section class="page" id="page-transactions">
-      <div class="empty-state">
-        <div class="empty-state-title">Transações</div>
-        <p class="empty-state-text">Chega na Etapa 3 🚀</p>
+      <div class="tx-filters">
+        <button class="tx-filter active" data-filter="all">Todas</button>
+        <button class="tx-filter" data-filter="income">Entradas</button>
+        <button class="tx-filter" data-filter="expense">Saídas</button>
+        <button class="tx-filter" data-owner-filter="all">
+          <span style="font-size:0.6875rem;">Todos</span>
+        </button>
       </div>
+      <div id="tx-summary" class="tx-summary"></div>
+      <div id="tx-list"></div>
     </section>
     <section class="page" id="page-cards">
       <div class="empty-state">
@@ -1269,6 +1515,7 @@ async function testConnection() {
 const State = {
   categories: [],
   accounts: [],
+  transactions: [],
 };
 
 /* ============================================
@@ -1325,15 +1572,18 @@ const Data = {
     if (!db) return;
     Status.set('syncing', 'Carregando dados…');
     try {
-      const [cats, accs] = await Promise.all([
+      const [cats, accs, txs] = await Promise.all([
         db.from('categories').select('*').order('name'),
         db.from('accounts').select('*').order('name'),
+        db.from('transactions').select('*').order('date', { ascending: false }),
       ]);
       if (cats.error) throw cats.error;
       if (accs.error) throw accs.error;
+      if (txs.error) throw txs.error;
       State.categories = cats.data || [];
       State.accounts = accs.data || [];
-      Status.set('connected', `${State.categories.length} categorias · ${State.accounts.length} contas`);
+      State.transactions = txs.data || [];
+      Status.set('connected', `${State.transactions.length} transações · ${State.categories.length} categorias`);
     } catch (e) {
       console.error(e);
       Status.set('disconnected', 'Erro ao carregar dados');
@@ -1393,7 +1643,41 @@ const Data = {
     const { error } = await db.from('accounts').delete().eq('id', id);
     if (error) { Status.set('disconnected', 'Erro ao excluir'); throw error; }
     State.accounts = State.accounts.filter(a => a.id !== id);
-    Status.set('connected', `${State.categories.length} categorias · ${State.accounts.length} contas`);
+    this._setReady();
+  },
+
+  // Helper: status "connected" com contadores atualizados
+  _setReady() {
+    Status.set('connected', `${State.transactions.length} transações · ${State.categories.length} categorias`);
+  },
+
+  // Transactions
+  async createTransaction(data) {
+    if (!db) throw new Error('Supabase não configurado');
+    Status.set('syncing', 'Salvando…');
+    const { data: row, error } = await db.from('transactions').insert([data]).select().single();
+    if (error) { Status.set('disconnected', 'Erro ao salvar'); throw error; }
+    State.transactions.unshift(row);
+    this._setReady();
+    return row;
+  },
+  async updateTransaction(id, data) {
+    if (!db) throw new Error('Supabase não configurado');
+    Status.set('syncing', 'Atualizando…');
+    const { data: row, error } = await db.from('transactions').update(data).eq('id', id).select().single();
+    if (error) { Status.set('disconnected', 'Erro ao atualizar'); throw error; }
+    const idx = State.transactions.findIndex(t => t.id === id);
+    if (idx >= 0) State.transactions[idx] = row;
+    this._setReady();
+    return row;
+  },
+  async deleteTransaction(id) {
+    if (!db) throw new Error('Supabase não configurado');
+    Status.set('syncing', 'Excluindo…');
+    const { error } = await db.from('transactions').delete().eq('id', id);
+    if (error) { Status.set('disconnected', 'Erro ao excluir'); throw error; }
+    State.transactions = State.transactions.filter(t => t.id !== id);
+    this._setReady();
   },
 };
 
@@ -1491,9 +1775,9 @@ function showPage(name) {
   );
   document.getElementById('header-title').textContent = PAGE_TITLES[name] || 'Finance';
 
-  if (name === 'settings') {
-    Settings.render();
-  }
+  if (name === 'settings') Settings.render();
+  if (name === 'transactions') Transactions.render();
+  if (name === 'dashboard') Dashboard.render();
 }
 
 function resetLoginUI() {
@@ -1582,7 +1866,10 @@ async function enterApp() {
   if (Connection.isConfigured()) {
     if (initSupabaseClient()) {
       const ok = await testConnection();
-      if (ok) await Data.loadAll();
+      if (ok) {
+        await Data.loadAll();
+        Dashboard.render();
+      }
     }
   } else {
     Status.set('disconnected', 'Configure o Supabase em Config');
@@ -1871,6 +2158,456 @@ function openAccountForm(account = null) {
 }
 
 /* ============================================
+   TRANSACTIONS — Renderização da página
+   ============================================ */
+const Transactions = {
+  filterType: 'all',     // 'all' | 'income' | 'expense'
+  filterOwner: 'all',    // 'all' | 'pv' | 'gigi' | 'shared'
+
+  render() {
+    let txs = State.transactions;
+
+    if (this.filterType !== 'all') {
+      txs = txs.filter(t => t.type === this.filterType);
+    }
+    if (this.filterOwner !== 'all') {
+      txs = txs.filter(t => t.owner === this.filterOwner);
+    }
+
+    this.renderSummary(txs);
+    this.renderList(txs);
+  },
+
+  renderSummary(txs) {
+    // Mês atual (do mais recente das transações filtradas, ou hoje)
+    const today = new Date();
+    const ym = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+    const monthTxs = txs.filter(t => (t.date || '').startsWith(ym));
+
+    let income = 0, expense = 0;
+    monthTxs.forEach(t => {
+      const v = Number(t.amount) || 0;
+      if (t.type === 'income') income += v;
+      else expense += v;
+    });
+
+    const monthLabel = today.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+    document.getElementById('tx-summary').innerHTML = `
+      <div class="tx-summary-item">
+        <div class="tx-summary-label">Entradas · ${monthLabel}</div>
+        <div class="tx-summary-value text-success">+${App.formatCurrency(income)}</div>
+      </div>
+      <div class="tx-summary-item">
+        <div class="tx-summary-label">Saídas · ${monthLabel}</div>
+        <div class="tx-summary-value text-danger">-${App.formatCurrency(expense)}</div>
+      </div>
+    `;
+  },
+
+  renderList(txs) {
+    const container = document.getElementById('tx-list');
+
+    if (!txs.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-title">Sem transações</div>
+          <p class="empty-state-text">Toque no <strong>+</strong> abaixo pra adicionar a primeira.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Agrupar por dia
+    const groups = {};
+    txs.forEach(t => {
+      const day = t.date || '';
+      if (!groups[day]) groups[day] = [];
+      groups[day].push(t);
+    });
+
+    const sortedDays = Object.keys(groups).sort().reverse();
+
+    container.innerHTML = sortedDays.map(day => {
+      const dayTxs = groups[day];
+      const dayTotal = dayTxs.reduce((sum, t) => {
+        const v = Number(t.amount) || 0;
+        return sum + (t.type === 'income' ? v : -v);
+      }, 0);
+
+      const totalClass = dayTotal >= 0 ? 'text-success' : 'text-danger';
+      const totalSign = dayTotal >= 0 ? '+' : '';
+
+      return `
+        <div class="day-group">
+          <div class="day-header">
+            <div>
+              <span class="day-label">${this.formatDayLabel(day)}</span>
+              <span class="day-label-secondary">${this.formatDayWeekday(day)}</span>
+            </div>
+            <span class="day-total ${totalClass}">${totalSign}${App.formatCurrency(dayTotal)}</span>
+          </div>
+          ${dayTxs.map(t => this.txRow(t)).join('')}
+        </div>
+      `;
+    }).join('');
+  },
+
+  txRow(t) {
+    const cat = State.categories.find(c => c.id === t.category_id);
+    const acc = State.accounts.find(a => a.id === t.account_id);
+    const sign = t.type === 'income' ? '+' : '-';
+    const amountClass = t.type === 'income' ? 'income' : 'expense';
+    const icon = cat?.icon || (t.type === 'income' ? '💰' : '💸');
+    const title = t.description || cat?.name || 'Sem categoria';
+    const accLabel = acc?.name || 'Sem conta';
+
+    return `
+      <div class="tx-row" data-edit-tx="${t.id}">
+        <div class="tx-icon" style="${cat?.color ? `background:${cat.color}22;` : ''}">${icon}</div>
+        <div class="tx-info">
+          <div class="tx-title">${escapeHtml(title)}</div>
+          <div class="tx-meta">
+            <span>${escapeHtml(accLabel)}</span>
+            <span>·</span>
+            <span class="owner-tag ${t.owner}">${this.ownerShort(t.owner)}</span>
+          </div>
+        </div>
+        <div class="tx-amount ${amountClass}">${sign}${App.formatCurrency(t.amount)}</div>
+      </div>
+    `;
+  },
+
+  ownerShort(o) {
+    return o === 'pv' ? 'PV' : o === 'gigi' ? 'Gigi' : 'Ambos';
+  },
+
+  formatDayLabel(dateStr) {
+    if (!dateStr) return 'Sem data';
+    const d = this.parseDate(dateStr);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (d.getTime() === today.getTime()) return 'Hoje';
+    if (d.getTime() === yesterday.getTime()) return 'Ontem';
+
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  },
+
+  formatDayWeekday(dateStr) {
+    if (!dateStr) return '';
+    const d = this.parseDate(dateStr);
+    return d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+  },
+
+  // Parse YYYY-MM-DD como data local (sem timezone shift)
+  parseDate(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  },
+};
+
+/* ============================================
+   FORMULÁRIO DE TRANSAÇÃO
+   ============================================ */
+function openTransactionForm(transaction = null) {
+  const isEdit = !!transaction;
+
+  // Defaults
+  const today = new Date().toISOString().split('T')[0];
+  const t = transaction || {
+    type: 'expense',
+    amount: '',
+    description: '',
+    date: today,
+    category_id: null,
+    account_id: State.accounts[0]?.id || null,
+    owner: Auth.getSession()?.userId || 'shared',
+  };
+
+  Modal.open(isEdit ? 'Editar transação' : 'Nova transação', `
+    <!-- Tipo -->
+    <div class="type-toggle" id="tx-type" style="margin-bottom: var(--space-4);">
+      <button type="button" data-type="expense" class="${t.type === 'expense' ? 'active expense' : ''}">Despesa</button>
+      <button type="button" data-type="income" class="${t.type === 'income' ? 'active income' : ''}">Receita</button>
+    </div>
+
+    <!-- Valor (input grande) -->
+    <input class="amount-input" id="tx-amount" type="text" inputmode="decimal" placeholder="$0.00"
+           value="${t.amount ? formatAmountInput(t.amount) : ''}" autocomplete="off">
+
+    <!-- Categoria (picker grid) -->
+    <div class="form-field">
+      <label class="form-label">Categoria</label>
+      <div class="picker-grid" id="tx-category-picker"></div>
+    </div>
+
+    <!-- Conta (picker grid) -->
+    <div class="form-field">
+      <label class="form-label">Conta</label>
+      <div class="picker-grid" id="tx-account-picker"></div>
+    </div>
+
+    <!-- Botão "Mais opções" -->
+    <button type="button" class="more-options-toggle" id="tx-more-toggle">
+      <span>Mais opções</span>
+      <svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+
+    <!-- Conteúdo expansível -->
+    <div class="more-options-content" id="tx-more-content">
+      <div class="form-field">
+        <label class="form-label">Descrição</label>
+        <input class="form-input" id="tx-description" value="${escapeHtml(t.description || '')}" placeholder="Ex: Café da manhã">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Data</label>
+        <input class="form-input" id="tx-date" type="date" value="${t.date}">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Quem pagou / recebeu</label>
+        ${ownerToggleHtml(t.owner)}
+      </div>
+    </div>
+
+    <!-- Ações -->
+    <div class="flex gap-3" style="margin-top: var(--space-5);">
+      ${isEdit ? `<button class="btn btn-danger" id="tx-delete">Excluir</button>` : ''}
+      <button class="btn btn-primary" id="tx-save">${isEdit ? 'Salvar' : 'Adicionar'}</button>
+    </div>
+  `);
+
+  // Estado interno do form
+  let selectedType = t.type;
+  let selectedCategoryId = t.category_id;
+  let selectedAccountId = t.account_id;
+
+  bindOwnerToggle();
+
+  // Toggle tipo (expense/income) — ao mudar, refiltrar categorias
+  const typeToggle = document.getElementById('tx-type');
+  typeToggle.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      typeToggle.querySelectorAll('button').forEach(b => {
+        b.classList.remove('active', 'expense', 'income');
+      });
+      btn.classList.add('active', btn.dataset.type);
+      selectedType = btn.dataset.type;
+      selectedCategoryId = null; // resetar categoria ao trocar tipo
+      renderCategoryPicker();
+    });
+  });
+
+  // Toggle "Mais opções"
+  const moreToggle = document.getElementById('tx-more-toggle');
+  const moreContent = document.getElementById('tx-more-content');
+  // Auto-expandir se for edição (já tem dados nos campos)
+  if (isEdit && (t.description || t.date !== today)) {
+    moreToggle.classList.add('expanded');
+    moreContent.classList.add('expanded');
+  }
+  moreToggle.addEventListener('click', () => {
+    moreToggle.classList.toggle('expanded');
+    moreContent.classList.toggle('expanded');
+  });
+
+  // Renderizar pickers
+  function renderCategoryPicker() {
+    const cats = State.categories.filter(c => c.type === selectedType);
+    const grid = document.getElementById('tx-category-picker');
+
+    if (!cats.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">Nenhuma categoria de ${selectedType === 'income' ? 'receita' : 'despesa'}. Crie em Config.</div>`;
+      return;
+    }
+
+    grid.innerHTML = cats.map(c => `
+      <div class="picker-item ${c.id === selectedCategoryId ? 'selected' : ''}" data-cat-id="${c.id}">
+        <div class="picker-emoji">${c.icon || '•'}</div>
+        <div class="picker-label">${escapeHtml(c.name)}</div>
+      </div>
+    `).join('');
+
+    grid.querySelectorAll('.picker-item').forEach(el => {
+      el.addEventListener('click', () => {
+        selectedCategoryId = el.dataset.catId;
+        grid.querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
+        el.classList.add('selected');
+      });
+    });
+  }
+
+  function renderAccountPicker() {
+    const grid = document.getElementById('tx-account-picker');
+    const typeIcons = { checking: '🏦', savings: '💰', cash: '💵', investment: '📈' };
+
+    if (!State.accounts.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">Nenhuma conta. Crie em Config.</div>`;
+      return;
+    }
+
+    grid.innerHTML = State.accounts.map(a => `
+      <div class="picker-item ${a.id === selectedAccountId ? 'selected' : ''}" data-acc-id="${a.id}">
+        <div class="picker-emoji">${typeIcons[a.type] || '🏦'}</div>
+        <div class="picker-label">${escapeHtml(a.name)}</div>
+      </div>
+    `).join('');
+
+    grid.querySelectorAll('.picker-item').forEach(el => {
+      el.addEventListener('click', () => {
+        selectedAccountId = el.dataset.accId;
+        grid.querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
+        el.classList.add('selected');
+      });
+    });
+  }
+
+  renderCategoryPicker();
+  renderAccountPicker();
+
+  // Auto-foco no campo de valor
+  setTimeout(() => document.getElementById('tx-amount').focus(), 300);
+
+  // Salvar
+  document.getElementById('tx-save').addEventListener('click', async () => {
+    const btn = document.getElementById('tx-save');
+    const amountStr = document.getElementById('tx-amount').value.replace(/[^0-9.,]/g, '').replace(',', '.');
+    const amount = parseFloat(amountStr);
+    const description = document.getElementById('tx-description').value.trim();
+    const date = document.getElementById('tx-date').value;
+    const owner = getSelectedOwner();
+
+    if (!amount || amount <= 0) return toast('Digite um valor válido', 'error');
+    if (!selectedAccountId) return toast('Selecione uma conta', 'error');
+    if (!date) return toast('Selecione uma data', 'error');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span>';
+
+    try {
+      const data = {
+        type: selectedType,
+        amount,
+        description: description || null,
+        date,
+        category_id: selectedCategoryId,
+        account_id: selectedAccountId,
+        owner,
+        created_by: Auth.getSession()?.userId,
+      };
+      if (isEdit) {
+        await Data.updateTransaction(transaction.id, data);
+        toast('Transação atualizada');
+      } else {
+        await Data.createTransaction(data);
+        toast('Transação adicionada');
+      }
+      Modal.close();
+      Transactions.render();
+      Dashboard.render();
+    } catch (err) {
+      toast('Erro: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = isEdit ? 'Salvar' : 'Adicionar';
+    }
+  });
+
+  if (isEdit) {
+    document.getElementById('tx-delete').addEventListener('click', async () => {
+      if (!confirm('Excluir esta transação?')) return;
+      try {
+        await Data.deleteTransaction(transaction.id);
+        toast('Transação excluída');
+        Modal.close();
+        Transactions.render();
+        Dashboard.render();
+      } catch (err) {
+        toast('Erro: ' + err.message, 'error');
+      }
+    });
+  }
+}
+
+// Helper pra formatar valor no input
+function formatAmountInput(value) {
+  return Number(value).toFixed(2);
+}
+
+/* ============================================
+   DASHBOARD — Cálculos de saldo
+   ============================================ */
+const Dashboard = {
+  render() {
+    const accountsBalance = this.calcAccountsBalance();
+    const monthStats = this.calcMonthStats();
+
+    // Saldo total = soma dos saldos calculados de todas as contas
+    const total = Object.values(accountsBalance.byOwner).reduce((s, v) => s + v, 0);
+
+    document.getElementById('balance-total').textContent = App.formatCurrency(total);
+
+    // Atualizar entradas/saídas do mês
+    const summaryEls = document.querySelectorAll('#page-dashboard .card:first-child .text-mono');
+    if (summaryEls[1]) summaryEls[1].textContent = '+' + App.formatCurrency(monthStats.income);
+    if (summaryEls[2]) summaryEls[2].textContent = '-' + App.formatCurrency(monthStats.expense);
+
+    // Atualizar saldos por usuário
+    const userCards = document.querySelectorAll('#page-dashboard .card[style*="flex:1"]');
+    if (userCards[0]) {
+      userCards[0].querySelector('.text-mono').textContent = App.formatCurrency(accountsBalance.byOwner.pv || 0);
+    }
+    if (userCards[1]) {
+      userCards[1].querySelector('.text-mono').textContent = App.formatCurrency(accountsBalance.byOwner.gigi || 0);
+    }
+  },
+
+  calcAccountsBalance() {
+    // Saldo = saldo inicial da conta + soma das transações
+    const byAccount = {};
+    State.accounts.forEach(a => {
+      byAccount[a.id] = { balance: Number(a.initial_balance) || 0, owner: a.owner };
+    });
+
+    State.transactions.forEach(t => {
+      if (!byAccount[t.account_id]) return;
+      const v = Number(t.amount) || 0;
+      byAccount[t.account_id].balance += (t.type === 'income' ? v : -v);
+    });
+
+    // Agrupar por owner (PV / Gigi / Shared dividido entre os 2)
+    const byOwner = { pv: 0, gigi: 0 };
+    Object.values(byAccount).forEach(({ balance, owner }) => {
+      if (owner === 'pv') byOwner.pv += balance;
+      else if (owner === 'gigi') byOwner.gigi += balance;
+      else if (owner === 'shared') {
+        // Divide igualmente entre os dois pra exibição
+        byOwner.pv += balance / 2;
+        byOwner.gigi += balance / 2;
+      }
+    });
+
+    return { byAccount, byOwner };
+  },
+
+  calcMonthStats() {
+    const today = new Date();
+    const ym = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+    const monthTxs = State.transactions.filter(t => (t.date || '').startsWith(ym));
+
+    let income = 0, expense = 0;
+    monthTxs.forEach(t => {
+      const v = Number(t.amount) || 0;
+      if (t.type === 'income') income += v;
+      else expense += v;
+    });
+
+    return { income, expense };
+  },
+};
+
+/* ============================================
    EVENTS
    ============================================ */
 document.getElementById('theme-toggle').addEventListener('click', () => App.toggleTheme());
@@ -1894,7 +2631,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 document.getElementById('fab-add').addEventListener('click', () => {
-  toast('Adicionar transação chega na Etapa 3 🚀');
+  if (!db) return toast('Configure o Supabase primeiro (aba Conexão)', 'error');
+  if (State.accounts.length === 0) return toast('Crie pelo menos uma conta antes', 'error');
+  openTransactionForm();
 });
 
 document.querySelectorAll('.tab').forEach(tab => {
@@ -1929,6 +2668,38 @@ document.addEventListener('click', (e) => {
     const id = editAcc.dataset.editAccount;
     const a = State.accounts.find(x => x.id === id);
     if (a) openAccountForm(a);
+    return;
+  }
+
+  const editTx = e.target.closest('[data-edit-tx]');
+  if (editTx) {
+    const id = editTx.dataset.editTx;
+    const t = State.transactions.find(x => x.id === id);
+    if (t) openTransactionForm(t);
+    return;
+  }
+
+  // Filtros de tipo (todas/entradas/saídas)
+  const txFilter = e.target.closest('.tx-filter[data-filter]');
+  if (txFilter) {
+    document.querySelectorAll('.tx-filter[data-filter]').forEach(b => b.classList.remove('active'));
+    txFilter.classList.add('active');
+    Transactions.filterType = txFilter.dataset.filter;
+    Transactions.render();
+    return;
+  }
+
+  // Filtro de owner (cíclico: all → pv → gigi → shared → all)
+  const ownerFilter = e.target.closest('.tx-filter[data-owner-filter]');
+  if (ownerFilter) {
+    const cycle = ['all', 'pv', 'gigi', 'shared'];
+    const labels = { all: 'Todos', pv: 'PV', gigi: 'Gigi', shared: 'Ambos' };
+    const current = Transactions.filterOwner;
+    const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
+    Transactions.filterOwner = next;
+    ownerFilter.querySelector('span').textContent = labels[next];
+    ownerFilter.classList.toggle('active', next !== 'all');
+    Transactions.render();
     return;
   }
 });
