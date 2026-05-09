@@ -17,7 +17,7 @@
 
 <style>
 :root {
-  --font-display: 'Fraunces', Georgia, serif;
+  --font-display: 'Lato', Tahoma, serif;
   --font-body: 'Inter Tight', -apple-system, sans-serif;
   --space-1: 4px; --space-2: 8px; --space-3: 12px;
   --space-4: 16px; --space-5: 24px; --space-6: 32px;
@@ -1108,6 +1108,275 @@ h1, h2, h3 {
 }
 .picker-item.selected .picker-label { color: var(--text-primary); }
 
+/* ===== CARTÕES ===== */
+.card-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+  transition: all var(--duration);
+  position: relative;
+  overflow: hidden;
+}
+.card-item:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-default);
+}
+.card-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.card-item-info { flex: 1; min-width: 0; }
+.card-item-name {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.card-item-meta {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.card-item-amount {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  flex-shrink: 0;
+}
+.card-item-amount-label {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  font-family: var(--font-body);
+  margin-bottom: 2px;
+}
+.card-dates {
+  display: flex;
+  gap: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+.card-date-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.card-date-label {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.card-date-value {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Badge "Apple Card style" */
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.625rem;
+  font-weight: 500;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.card-badge.installments { background: rgba(167,139,250,0.15); color: var(--shared-color); }
+
+/* Fatura — tela de detalhe */
+.invoice-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.invoice-back {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: all var(--duration);
+}
+.invoice-back:hover { color: var(--text-primary); background: var(--bg-hover); }
+.invoice-back svg { width: 18px; height: 18px; }
+
+.invoice-title-block { flex: 1; min-width: 0; }
+.invoice-card-name {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.invoice-card-sub {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* Seletor de mês de fatura */
+.invoice-month-tabs {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-1);
+}
+.invoice-month-tabs::-webkit-scrollbar { display: none; }
+.invoice-month-tab {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  text-transform: capitalize;
+  transition: all var(--duration);
+}
+.invoice-month-tab.active {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
+}
+
+.invoice-summary {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-4);
+}
+.invoice-summary-label {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  margin-bottom: var(--space-1);
+}
+.invoice-summary-amount {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: var(--space-2);
+}
+.invoice-summary-detail {
+  display: flex;
+  gap: var(--space-4);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  flex-wrap: wrap;
+}
+.invoice-summary-detail strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Selector "Pagar com" no form (conta vs cartão) */
+.payment-source-toggle {
+  display: flex;
+  gap: 0;
+  background: var(--bg-secondary);
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  margin-bottom: var(--space-3);
+}
+.payment-source-toggle button {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all var(--duration);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+}
+.payment-source-toggle button.active {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Stepper de parcelas */
+.installments-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--bg-secondary);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+}
+.installments-btn {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: all var(--duration);
+}
+.installments-btn:hover { background: var(--bg-hover); }
+.installments-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.installments-display {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+.installments-count {
+  font-size: 1.125rem;
+}
+.installments-each {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-body);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -1239,6 +1508,7 @@ html { scroll-behavior: smooth; }
       <div class="tabs">
         <button class="tab active" data-tab="categories">Categorias</button>
         <button class="tab" data-tab="accounts">Contas</button>
+        <button class="tab" data-tab="cards-config">Cartões</button>
         <button class="tab" data-tab="connection">Conexão</button>
       </div>
 
@@ -1271,6 +1541,17 @@ html { scroll-behavior: smooth; }
           </button>
         </div>
         <div class="item-list" id="list-accounts"></div>
+      </div>
+
+      <div class="tab-content hidden" id="tab-cards-config">
+        <div class="section-header">
+          <span class="section-title">Seus cartões</span>
+          <button class="section-add" data-add="card">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-linecap="round"/></svg>
+            Novo
+          </button>
+        </div>
+        <div class="item-list" id="list-cards-config"></div>
       </div>
 
       <div class="tab-content hidden" id="tab-connection">
@@ -1328,10 +1609,7 @@ html { scroll-behavior: smooth; }
       <div id="tx-list"></div>
     </section>
     <section class="page" id="page-cards">
-      <div class="empty-state">
-        <div class="empty-state-title">Cartões</div>
-        <p class="empty-state-text">Chega na Etapa 4 💳</p>
-      </div>
+      <div id="cards-page-content"></div>
     </section>
     <section class="page" id="page-calendar">
       <div class="empty-state">
@@ -1515,6 +1793,7 @@ async function testConnection() {
 const State = {
   categories: [],
   accounts: [],
+  cards: [],
   transactions: [],
 };
 
@@ -1572,18 +1851,21 @@ const Data = {
     if (!db) return;
     Status.set('syncing', 'Carregando dados…');
     try {
-      const [cats, accs, txs] = await Promise.all([
+      const [cats, accs, crds, txs] = await Promise.all([
         db.from('categories').select('*').order('name'),
         db.from('accounts').select('*').order('name'),
+        db.from('cards').select('*').order('name'),
         db.from('transactions').select('*').order('date', { ascending: false }),
       ]);
       if (cats.error) throw cats.error;
       if (accs.error) throw accs.error;
+      if (crds.error) throw crds.error;
       if (txs.error) throw txs.error;
       State.categories = cats.data || [];
       State.accounts = accs.data || [];
+      State.cards = crds.data || [];
       State.transactions = txs.data || [];
-      Status.set('connected', `${State.transactions.length} transações · ${State.categories.length} categorias`);
+      Status.set('connected', `${State.transactions.length} transações · ${State.cards.length} cartões`);
     } catch (e) {
       console.error(e);
       Status.set('disconnected', 'Erro ao carregar dados');
@@ -1648,7 +1930,36 @@ const Data = {
 
   // Helper: status "connected" com contadores atualizados
   _setReady() {
-    Status.set('connected', `${State.transactions.length} transações · ${State.categories.length} categorias`);
+    Status.set('connected', `${State.transactions.length} transações · ${State.cards.length} cartões`);
+  },
+
+  // Cards
+  async createCard(data) {
+    if (!db) throw new Error('Supabase não configurado');
+    Status.set('syncing', 'Salvando…');
+    const { data: row, error } = await db.from('cards').insert([data]).select().single();
+    if (error) { Status.set('disconnected', 'Erro ao salvar'); throw error; }
+    State.cards.push(row);
+    this._setReady();
+    return row;
+  },
+  async updateCard(id, data) {
+    if (!db) throw new Error('Supabase não configurado');
+    Status.set('syncing', 'Atualizando…');
+    const { data: row, error } = await db.from('cards').update(data).eq('id', id).select().single();
+    if (error) { Status.set('disconnected', 'Erro ao atualizar'); throw error; }
+    const idx = State.cards.findIndex(c => c.id === id);
+    if (idx >= 0) State.cards[idx] = row;
+    this._setReady();
+    return row;
+  },
+  async deleteCard(id) {
+    if (!db) throw new Error('Supabase não configurado');
+    Status.set('syncing', 'Excluindo…');
+    const { error } = await db.from('cards').delete().eq('id', id);
+    if (error) { Status.set('disconnected', 'Erro ao excluir'); throw error; }
+    State.cards = State.cards.filter(c => c.id !== id);
+    this._setReady();
   },
 
   // Transactions
@@ -1660,6 +1971,16 @@ const Data = {
     State.transactions.unshift(row);
     this._setReady();
     return row;
+  },
+  // Cria várias transações de uma vez (parcelamento)
+  async createTransactionsBatch(rows) {
+    if (!db) throw new Error('Supabase não configurado');
+    Status.set('syncing', 'Salvando parcelas…');
+    const { data, error } = await db.from('transactions').insert(rows).select();
+    if (error) { Status.set('disconnected', 'Erro ao salvar parcelas'); throw error; }
+    (data || []).forEach(r => State.transactions.unshift(r));
+    this._setReady();
+    return data;
   },
   async updateTransaction(id, data) {
     if (!db) throw new Error('Supabase não configurado');
@@ -1682,8 +2003,129 @@ const Data = {
 };
 
 /* ============================================
-   APP — Tema, formatação, UI
+   INVOICE ENGINE — Cálculo de mês de fatura
+   ============================================
+   Lógica:
+   - Cada cartão tem closing_day (dia de fechamento) e due_day (vencimento)
+   - Compra com data <= closing_day → fatura fecha NESSE mês,
+     vence no próximo mês (geralmente)
+   - Compra com data > closing_day → fatura fecha no PRÓXIMO mês,
+     vence dois meses depois (geralmente)
+   - Convenção: invoice_month = primeiro dia do mês de VENCIMENTO
    ============================================ */
+const Invoice = {
+  /**
+   * Dado uma data de compra e um cartão, retorna o invoice_month (Date)
+   * = primeiro dia do mês em que essa fatura vence.
+   *
+   * Exemplo: cartão fecha dia 25, vence dia 5 do mês seguinte.
+   * - Compra em 8/maio → fechamento 25/maio → vence 5/junho → invoice_month = 1/junho
+   * - Compra em 28/maio → fechamento 25/junho → vence 5/julho → invoice_month = 1/julho
+   */
+  computeMonth(purchaseDate, card) {
+    const date = typeof purchaseDate === 'string' ? this._parseLocalDate(purchaseDate) : purchaseDate;
+    const closing = Number(card.closing_day);
+    const due = Number(card.due_day);
+
+    // 1) Determinar a data de fechamento do ciclo da compra
+    let closingDate = new Date(date.getFullYear(), date.getMonth(), closing);
+    if (date.getDate() > closing) {
+      // Comprou DEPOIS do fechamento: ciclo é o do mês que vem
+      closingDate.setMonth(closingDate.getMonth() + 1);
+    }
+
+    // 2) Vencimento = mês seguinte ao fechamento (ou mesmo mês se due > closing)
+    let dueDate;
+    if (due > closing) {
+      // Mesmo ciclo: fecha 25/mai, vence 28/mai
+      dueDate = new Date(closingDate.getFullYear(), closingDate.getMonth(), due);
+    } else {
+      // Mês seguinte: fecha 25/mai, vence 5/jun
+      dueDate = new Date(closingDate.getFullYear(), closingDate.getMonth() + 1, due);
+    }
+
+    // invoice_month = primeiro dia do mês de vencimento
+    return new Date(dueDate.getFullYear(), dueDate.getMonth(), 1);
+  },
+
+  /** Retorna invoice_month como string YYYY-MM-01 (formato pra DB) */
+  computeMonthString(purchaseDate, card) {
+    const d = this.computeMonth(purchaseDate, card);
+    return this._toIsoDate(d);
+  },
+
+  /** Avança N meses um invoice_month */
+  addMonths(invoiceMonth, n) {
+    const d = typeof invoiceMonth === 'string' ? this._parseLocalDate(invoiceMonth) : new Date(invoiceMonth);
+    const result = new Date(d.getFullYear(), d.getMonth() + n, 1);
+    return this._toIsoDate(result);
+  },
+
+  /** Próximo fechamento do cartão a partir de hoje */
+  nextClosingDate(card, fromDate = new Date()) {
+    const closing = Number(card.closing_day);
+    const today = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+    let next = new Date(today.getFullYear(), today.getMonth(), closing);
+    if (today.getDate() > closing) {
+      next.setMonth(next.getMonth() + 1);
+    }
+    return next;
+  },
+
+  /** Próximo vencimento do cartão a partir de hoje */
+  nextDueDate(card, fromDate = new Date()) {
+    const closing = Number(card.closing_day);
+    const due = Number(card.due_day);
+    const closingDate = this.nextClosingDate(card, fromDate);
+
+    if (due > closing) {
+      return new Date(closingDate.getFullYear(), closingDate.getMonth(), due);
+    } else {
+      return new Date(closingDate.getFullYear(), closingDate.getMonth() + 1, due);
+    }
+  },
+
+  /** Lista todas as transações de uma fatura específica de um cartão */
+  getInvoiceTransactions(cardId, invoiceMonth) {
+    return State.transactions.filter(t =>
+      t.card_id === cardId && t.invoice_month === invoiceMonth
+    );
+  },
+
+  /** Total a pagar em uma fatura */
+  getInvoiceTotal(cardId, invoiceMonth) {
+    return this.getInvoiceTransactions(cardId, invoiceMonth)
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  },
+
+  /** Lista invoice_months únicos de um cartão (ordenados desc) */
+  getCardInvoiceMonths(cardId) {
+    const set = new Set(
+      State.transactions
+        .filter(t => t.card_id === cardId && t.invoice_month)
+        .map(t => t.invoice_month)
+    );
+    return Array.from(set).sort().reverse();
+  },
+
+  // Helpers internos
+  _parseLocalDate(s) {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  },
+  _toIsoDate(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  },
+
+  /** Formata invoice_month "2025-06-01" → "Junho 2025" */
+  formatMonth(invoiceMonth) {
+    if (!invoiceMonth) return '—';
+    const d = this._parseLocalDate(invoiceMonth);
+    return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  },
+};
+
+
 const App = {
   initTheme() {
     const saved = localStorage.getItem('theme') || 'dark';
@@ -1778,6 +2220,11 @@ function showPage(name) {
   if (name === 'settings') Settings.render();
   if (name === 'transactions') Transactions.render();
   if (name === 'dashboard') Dashboard.render();
+  if (name === 'cards') {
+    Cards.view = 'list';
+    Cards.selectedCardId = null;
+    Cards.render();
+  }
 }
 
 function resetLoginUI() {
@@ -1883,6 +2330,7 @@ const Settings = {
   render() {
     this.renderCategories();
     this.renderAccounts();
+    this.renderCards();
     this.renderConnection();
   },
 
@@ -1915,6 +2363,33 @@ const Settings = {
     const list = State.accounts;
     document.getElementById('list-accounts').innerHTML =
       list.length ? list.map(a => this.accountRow(a)).join('') : this.emptyMsg('Nenhuma conta cadastrada. Adicione a primeira!');
+  },
+
+  renderCards() {
+    const list = State.cards;
+    document.getElementById('list-cards-config').innerHTML =
+      list.length ? list.map(c => this.cardConfigRow(c)).join('') : this.emptyMsg('Nenhum cartão cadastrado. Adicione o primeiro!');
+  },
+
+  cardConfigRow(c) {
+    const acc = State.accounts.find(a => a.id === c.account_id);
+    const modeLabel = c.payment_mode === 'installments_only' ? 'Parcela mensal' : 'Fatura completa';
+    return `
+      <div class="item-row" data-edit-card="${c.id}">
+        <div class="item-icon">💳</div>
+        <div class="item-info">
+          <div class="item-name">${escapeHtml(c.name)}${c.last_digits ? ` ····${escapeHtml(c.last_digits)}` : ''}</div>
+          <div class="item-meta">
+            <span class="owner-tag ${c.owner}">${this.ownerLabel(c.owner)}</span>
+            <span>·</span>
+            <span>Fecha ${c.closing_day} · Vence ${c.due_day}</span>
+            <span>·</span>
+            <span>${modeLabel}</span>
+          </div>
+        </div>
+        <div class="item-amount">${App.formatCurrency(c.credit_limit)}</div>
+      </div>
+    `;
   },
 
   accountRow(a) {
@@ -2157,6 +2632,132 @@ function openAccountForm(account = null) {
   }
 }
 
+// ===== Formulário de Cartão =====
+function openCardForm(card = null) {
+  const isEdit = !!card;
+  const c = card || {
+    name: '', brand: '', last_digits: '',
+    credit_limit: 0, closing_day: 1, due_day: 10,
+    payment_mode: 'full', account_id: null, owner: 'shared',
+  };
+
+  const accountOptions = State.accounts.map(a =>
+    `<option value="${a.id}" ${a.id === c.account_id ? 'selected' : ''}>${escapeHtml(a.name)}</option>`
+  ).join('');
+
+  Modal.open(isEdit ? 'Editar cartão' : 'Novo cartão', `
+    <div class="form-field">
+      <label class="form-label">Nome do cartão</label>
+      <input class="form-input" id="card-name" value="${escapeHtml(c.name)}" placeholder="Ex: Apple Card">
+    </div>
+    <div class="flex gap-3" style="margin-bottom: var(--space-4);">
+      <div class="form-field" style="flex:1;margin-bottom:0;">
+        <label class="form-label">Bandeira</label>
+        <input class="form-input" id="card-brand" value="${escapeHtml(c.brand || '')}" placeholder="Visa, Master...">
+      </div>
+      <div class="form-field" style="flex:1;margin-bottom:0;">
+        <label class="form-label">Últimos 4 dígitos</label>
+        <input class="form-input" id="card-digits" value="${escapeHtml(c.last_digits || '')}" placeholder="1234" maxlength="4" inputmode="numeric">
+      </div>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Limite de crédito (USD)</label>
+      <input class="form-input" id="card-limit" type="number" step="0.01" value="${c.credit_limit}" placeholder="0.00">
+    </div>
+    <div class="flex gap-3" style="margin-bottom: var(--space-4);">
+      <div class="form-field" style="flex:1;margin-bottom:0;">
+        <label class="form-label">Fecha dia</label>
+        <input class="form-input" id="card-closing" type="number" min="1" max="31" value="${c.closing_day}">
+      </div>
+      <div class="form-field" style="flex:1;margin-bottom:0;">
+        <label class="form-label">Vence dia</label>
+        <input class="form-input" id="card-due" type="number" min="1" max="31" value="${c.due_day}">
+      </div>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Conta de pagamento</label>
+      <select class="form-select" id="card-account">
+        <option value="">— nenhuma —</option>
+        ${accountOptions}
+      </select>
+      <div class="form-help">Conta de onde a fatura será debitada (opcional)</div>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Modo de fatura</label>
+      <select class="form-select" id="card-mode">
+        <option value="full" ${c.payment_mode === 'full' ? 'selected' : ''}>Fatura completa (cartão normal)</option>
+        <option value="installments_only" ${c.payment_mode === 'installments_only' ? 'selected' : ''}>Só parcela do mês (Apple Card / Interest Savings)</option>
+      </select>
+      <div class="form-help">Cartões como Apple Card cobram só a parcela mensal — não o valor total da fatura.</div>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Quem usa</label>
+      ${ownerToggleHtml(c.owner)}
+    </div>
+    <div class="flex gap-3" style="margin-top: var(--space-5);">
+      ${isEdit ? `<button class="btn btn-danger" id="card-delete">Excluir</button>` : ''}
+      <button class="btn btn-primary" id="card-save">${isEdit ? 'Salvar' : 'Criar'}</button>
+    </div>
+  `);
+
+  bindOwnerToggle();
+
+  document.getElementById('card-save').addEventListener('click', async () => {
+    const btn = document.getElementById('card-save');
+    const name = document.getElementById('card-name').value.trim();
+    const brand = document.getElementById('card-brand').value.trim();
+    const last_digits = document.getElementById('card-digits').value.trim();
+    const credit_limit = parseFloat(document.getElementById('card-limit').value) || 0;
+    const closing_day = parseInt(document.getElementById('card-closing').value, 10);
+    const due_day = parseInt(document.getElementById('card-due').value, 10);
+    const account_id = document.getElementById('card-account').value || null;
+    const payment_mode = document.getElementById('card-mode').value;
+    const owner = getSelectedOwner();
+
+    if (!name) return toast('Digite um nome', 'error');
+    if (!closing_day || closing_day < 1 || closing_day > 31) return toast('Dia de fechamento inválido', 'error');
+    if (!due_day || due_day < 1 || due_day > 31) return toast('Dia de vencimento inválido', 'error');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span>';
+
+    try {
+      const data = {
+        name, brand: brand || null, last_digits: last_digits || null,
+        credit_limit, closing_day, due_day, account_id,
+        payment_mode, owner, created_by: Auth.getSession()?.userId,
+      };
+      if (isEdit) {
+        await Data.updateCard(card.id, data);
+        toast('Cartão atualizado');
+      } else {
+        await Data.createCard(data);
+        toast('Cartão criado');
+      }
+      Modal.close();
+      Settings.renderCards();
+    } catch (err) {
+      toast('Erro: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = isEdit ? 'Salvar' : 'Criar';
+    }
+  });
+
+  if (isEdit) {
+    document.getElementById('card-delete').addEventListener('click', async () => {
+      if (!confirm(`Excluir "${c.name}"? As transações ficam órfãs.`)) return;
+      try {
+        await Data.deleteCard(card.id);
+        toast('Cartão excluído');
+        Modal.close();
+        Settings.renderCards();
+      } catch (err) {
+        toast('Erro: ' + err.message, 'error');
+      }
+    });
+  }
+}
+
 /* ============================================
    TRANSACTIONS — Renderização da página
    ============================================ */
@@ -2256,11 +2857,16 @@ const Transactions = {
   txRow(t) {
     const cat = State.categories.find(c => c.id === t.category_id);
     const acc = State.accounts.find(a => a.id === t.account_id);
+    const card = State.cards.find(c => c.id === t.card_id);
     const sign = t.type === 'income' ? '+' : '-';
     const amountClass = t.type === 'income' ? 'income' : 'expense';
     const icon = cat?.icon || (t.type === 'income' ? '💰' : '💸');
     const title = t.description || cat?.name || 'Sem categoria';
-    const accLabel = acc?.name || 'Sem conta';
+    const sourceLabel = card?.name || acc?.name || 'Sem origem';
+    const sourceIcon = card ? '💳 ' : '';
+    const installmentBadge = t.installments_total > 1
+      ? `<span class="card-badge installments">${t.installment_number}/${t.installments_total}</span>`
+      : '';
 
     return `
       <div class="tx-row" data-edit-tx="${t.id}">
@@ -2268,7 +2874,8 @@ const Transactions = {
         <div class="tx-info">
           <div class="tx-title">${escapeHtml(title)}</div>
           <div class="tx-meta">
-            <span>${escapeHtml(accLabel)}</span>
+            <span>${sourceIcon}${escapeHtml(sourceLabel)}</span>
+            ${installmentBadge ? `<span>·</span>${installmentBadge}` : ''}
             <span>·</span>
             <span class="owner-tag ${t.owner}">${this.ownerShort(t.owner)}</span>
           </div>
@@ -2315,7 +2922,6 @@ const Transactions = {
 function openTransactionForm(transaction = null) {
   const isEdit = !!transaction;
 
-  // Defaults
   const today = new Date().toISOString().split('T')[0];
   const t = transaction || {
     type: 'expense',
@@ -2324,8 +2930,13 @@ function openTransactionForm(transaction = null) {
     date: today,
     category_id: null,
     account_id: State.accounts[0]?.id || null,
+    card_id: null,
+    installments_total: 1,
     owner: Auth.getSession()?.userId || 'shared',
   };
+
+  // Source: 'account' ou 'card'
+  const initialSource = t.card_id ? 'card' : 'account';
 
   Modal.open(isEdit ? 'Editar transação' : 'Nova transação', `
     <!-- Tipo -->
@@ -2334,29 +2945,44 @@ function openTransactionForm(transaction = null) {
       <button type="button" data-type="income" class="${t.type === 'income' ? 'active income' : ''}">Receita</button>
     </div>
 
-    <!-- Valor (input grande) -->
+    <!-- Valor -->
     <input class="amount-input" id="tx-amount" type="text" inputmode="decimal" placeholder="$0.00"
            value="${t.amount ? formatAmountInput(t.amount) : ''}" autocomplete="off">
 
-    <!-- Categoria (picker grid) -->
+    <!-- Categoria -->
     <div class="form-field">
       <label class="form-label">Categoria</label>
       <div class="picker-grid" id="tx-category-picker"></div>
     </div>
 
-    <!-- Conta (picker grid) -->
-    <div class="form-field">
-      <label class="form-label">Conta</label>
-      <div class="picker-grid" id="tx-account-picker"></div>
+    <!-- Pagar com (Conta ou Cartão) -->
+    <div class="form-field" id="tx-source-block">
+      <label class="form-label">Pagar com</label>
+      <div class="payment-source-toggle" id="tx-source">
+        <button type="button" data-source="account" class="${initialSource === 'account' ? 'active' : ''}">🏦 Conta</button>
+        <button type="button" data-source="card" class="${initialSource === 'card' ? 'active' : ''}">💳 Cartão</button>
+      </div>
+      <div class="picker-grid" id="tx-source-picker"></div>
     </div>
 
-    <!-- Botão "Mais opções" -->
+    <!-- Parcelamento (só aparece se source=card) -->
+    <div class="form-field hidden" id="tx-installments-block">
+      <label class="form-label">Parcelas</label>
+      <div class="installments-stepper">
+        <button type="button" class="installments-btn" id="inst-minus">−</button>
+        <div class="installments-display">
+          <div class="installments-count" id="inst-count">${t.installments_total || 1}x</div>
+          <div class="installments-each" id="inst-each"></div>
+        </div>
+        <button type="button" class="installments-btn" id="inst-plus">+</button>
+      </div>
+    </div>
+
+    <!-- Mais opções -->
     <button type="button" class="more-options-toggle" id="tx-more-toggle">
       <span>Mais opções</span>
       <svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
-
-    <!-- Conteúdo expansível -->
     <div class="more-options-content" id="tx-more-content">
       <div class="form-field">
         <label class="form-label">Descrição</label>
@@ -2372,7 +2998,6 @@ function openTransactionForm(transaction = null) {
       </div>
     </div>
 
-    <!-- Ações -->
     <div class="flex gap-3" style="margin-top: var(--space-5);">
       ${isEdit ? `<button class="btn btn-danger" id="tx-delete">Excluir</button>` : ''}
       <button class="btn btn-primary" id="tx-save">${isEdit ? 'Salvar' : 'Adicionar'}</button>
@@ -2383,27 +3008,64 @@ function openTransactionForm(transaction = null) {
   let selectedType = t.type;
   let selectedCategoryId = t.category_id;
   let selectedAccountId = t.account_id;
+  let selectedCardId = t.card_id;
+  let selectedSource = initialSource; // 'account' | 'card'
+  let installments = t.installments_total || 1;
 
   bindOwnerToggle();
 
-  // Toggle tipo (expense/income) — ao mudar, refiltrar categorias
+  // Toggle tipo
   const typeToggle = document.getElementById('tx-type');
   typeToggle.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => {
-      typeToggle.querySelectorAll('button').forEach(b => {
-        b.classList.remove('active', 'expense', 'income');
-      });
+      typeToggle.querySelectorAll('button').forEach(b => b.classList.remove('active', 'expense', 'income'));
       btn.classList.add('active', btn.dataset.type);
       selectedType = btn.dataset.type;
-      selectedCategoryId = null; // resetar categoria ao trocar tipo
+      selectedCategoryId = null;
+      // Receita só pode ir pra conta (cartão não recebe entrada)
+      if (selectedType === 'income') {
+        selectedSource = 'account';
+        selectedCardId = null;
+        document.getElementById('tx-source').querySelectorAll('button').forEach(b => {
+          b.classList.toggle('active', b.dataset.source === 'account');
+        });
+        document.getElementById('tx-source-block').querySelector('.payment-source-toggle')
+          .style.display = 'none';
+      } else {
+        document.getElementById('tx-source-block').querySelector('.payment-source-toggle')
+          .style.display = '';
+      }
       renderCategoryPicker();
+      renderSourcePicker();
+      updateInstallmentsVisibility();
     });
   });
 
-  // Toggle "Mais opções"
+  // Toggle source (conta vs cartão)
+  const sourceToggle = document.getElementById('tx-source');
+  sourceToggle.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sourceToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedSource = btn.dataset.source;
+      if (selectedSource === 'account') selectedCardId = null;
+      else selectedAccountId = null;
+      renderSourcePicker();
+      updateInstallmentsVisibility();
+    });
+  });
+
+  // Stepper parcelas
+  document.getElementById('inst-minus').addEventListener('click', () => {
+    if (installments > 1) { installments--; updateInstallmentsDisplay(); }
+  });
+  document.getElementById('inst-plus').addEventListener('click', () => {
+    if (installments < 24) { installments++; updateInstallmentsDisplay(); }
+  });
+
+  // Mais opções
   const moreToggle = document.getElementById('tx-more-toggle');
   const moreContent = document.getElementById('tx-more-content');
-  // Auto-expandir se for edição (já tem dados nos campos)
   if (isEdit && (t.description || t.date !== today)) {
     moreToggle.classList.add('expanded');
     moreContent.classList.add('expanded');
@@ -2413,13 +3075,40 @@ function openTransactionForm(transaction = null) {
     moreContent.classList.toggle('expanded');
   });
 
-  // Renderizar pickers
+  // Atualizar valor por parcela
+  document.getElementById('tx-amount').addEventListener('input', updateInstallmentsDisplay);
+
+  function updateInstallmentsDisplay() {
+    document.getElementById('inst-count').textContent = installments + 'x';
+    const amountStr = document.getElementById('tx-amount').value.replace(/[^0-9.,]/g, '').replace(',', '.');
+    const amount = parseFloat(amountStr);
+    if (amount && installments > 1) {
+      const each = amount / installments;
+      document.getElementById('inst-each').textContent = `de ${App.formatCurrency(each)} cada`;
+    } else {
+      document.getElementById('inst-each').textContent = '';
+    }
+    document.getElementById('inst-minus').disabled = installments <= 1;
+    document.getElementById('inst-plus').disabled = installments >= 24;
+  }
+
+  function updateInstallmentsVisibility() {
+    const block = document.getElementById('tx-installments-block');
+    if (selectedSource === 'card' && selectedType === 'expense') {
+      block.classList.remove('hidden');
+    } else {
+      block.classList.add('hidden');
+      installments = 1;
+      updateInstallmentsDisplay();
+    }
+  }
+
   function renderCategoryPicker() {
     const cats = State.categories.filter(c => c.type === selectedType);
     const grid = document.getElementById('tx-category-picker');
 
     if (!cats.length) {
-      grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">Nenhuma categoria de ${selectedType === 'income' ? 'receita' : 'despesa'}. Crie em Config.</div>`;
+      grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">Nenhuma categoria de ${selectedType === 'income' ? 'receita' : 'despesa'}.</div>`;
       return;
     }
 
@@ -2439,35 +3128,59 @@ function openTransactionForm(transaction = null) {
     });
   }
 
-  function renderAccountPicker() {
-    const grid = document.getElementById('tx-account-picker');
-    const typeIcons = { checking: '🏦', savings: '💰', cash: '💵', investment: '📈' };
+  function renderSourcePicker() {
+    const grid = document.getElementById('tx-source-picker');
 
-    if (!State.accounts.length) {
-      grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">Nenhuma conta. Crie em Config.</div>`;
-      return;
-    }
-
-    grid.innerHTML = State.accounts.map(a => `
-      <div class="picker-item ${a.id === selectedAccountId ? 'selected' : ''}" data-acc-id="${a.id}">
-        <div class="picker-emoji">${typeIcons[a.type] || '🏦'}</div>
-        <div class="picker-label">${escapeHtml(a.name)}</div>
-      </div>
-    `).join('');
-
-    grid.querySelectorAll('.picker-item').forEach(el => {
-      el.addEventListener('click', () => {
-        selectedAccountId = el.dataset.accId;
-        grid.querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
-        el.classList.add('selected');
+    if (selectedSource === 'account') {
+      const typeIcons = { checking: '🏦', savings: '💰', cash: '💵', investment: '📈' };
+      if (!State.accounts.length) {
+        grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">Nenhuma conta. Crie em Config.</div>`;
+        return;
+      }
+      grid.innerHTML = State.accounts.map(a => `
+        <div class="picker-item ${a.id === selectedAccountId ? 'selected' : ''}" data-acc-id="${a.id}">
+          <div class="picker-emoji">${typeIcons[a.type] || '🏦'}</div>
+          <div class="picker-label">${escapeHtml(a.name)}</div>
+        </div>
+      `).join('');
+      grid.querySelectorAll('.picker-item').forEach(el => {
+        el.addEventListener('click', () => {
+          selectedAccountId = el.dataset.accId;
+          grid.querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
+          el.classList.add('selected');
+        });
       });
-    });
+    } else {
+      // Cards
+      if (!State.cards.length) {
+        grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">Nenhum cartão. Crie em Config.</div>`;
+        return;
+      }
+      grid.innerHTML = State.cards.map(card => `
+        <div class="picker-item ${card.id === selectedCardId ? 'selected' : ''}" data-card-id="${card.id}">
+          <div class="picker-emoji">💳</div>
+          <div class="picker-label">${escapeHtml(card.name)}</div>
+        </div>
+      `).join('');
+      grid.querySelectorAll('.picker-item').forEach(el => {
+        el.addEventListener('click', () => {
+          selectedCardId = el.dataset.cardId;
+          grid.querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
+          el.classList.add('selected');
+        });
+      });
+    }
   }
 
+  // Init
+  if (selectedType === 'income') {
+    document.getElementById('tx-source-block').querySelector('.payment-source-toggle').style.display = 'none';
+  }
   renderCategoryPicker();
-  renderAccountPicker();
+  renderSourcePicker();
+  updateInstallmentsVisibility();
+  updateInstallmentsDisplay();
 
-  // Auto-foco no campo de valor
   setTimeout(() => document.getElementById('tx-amount').focus(), 300);
 
   // Salvar
@@ -2480,33 +3193,91 @@ function openTransactionForm(transaction = null) {
     const owner = getSelectedOwner();
 
     if (!amount || amount <= 0) return toast('Digite um valor válido', 'error');
-    if (!selectedAccountId) return toast('Selecione uma conta', 'error');
     if (!date) return toast('Selecione uma data', 'error');
+    if (selectedSource === 'account' && !selectedAccountId) return toast('Selecione uma conta', 'error');
+    if (selectedSource === 'card' && !selectedCardId) return toast('Selecione um cartão', 'error');
 
     btn.disabled = true;
     btn.innerHTML = '<span class="loading"></span>';
 
     try {
-      const data = {
+      const baseData = {
         type: selectedType,
-        amount,
         description: description || null,
-        date,
         category_id: selectedCategoryId,
-        account_id: selectedAccountId,
         owner,
         created_by: Auth.getSession()?.userId,
       };
+
       if (isEdit) {
+        // Edição: atualizar 1 só
+        const data = {
+          ...baseData,
+          amount,
+          date,
+          account_id: selectedSource === 'account' ? selectedAccountId : null,
+          card_id: selectedSource === 'card' ? selectedCardId : null,
+          installments_total: 1,
+          installment_number: 1,
+          installment_group_id: null,
+          invoice_month: null,
+        };
+        if (selectedSource === 'card') {
+          const card = State.cards.find(c => c.id === selectedCardId);
+          if (card) data.invoice_month = Invoice.computeMonthString(date, card);
+        }
         await Data.updateTransaction(transaction.id, data);
         toast('Transação atualizada');
+      } else if (selectedSource === 'card' && installments > 1) {
+        // Criação parcelada: gera N transações, uma por mês
+        const card = State.cards.find(c => c.id === selectedCardId);
+        const groupId = crypto.randomUUID();
+        const eachAmount = Math.round((amount / installments) * 100) / 100;
+        // Ajuste de centavos: última parcela compensa
+        const lastAmount = Math.round((amount - eachAmount * (installments - 1)) * 100) / 100;
+
+        const firstInvoice = Invoice.computeMonthString(date, card);
+
+        const rows = [];
+        for (let i = 0; i < installments; i++) {
+          rows.push({
+            ...baseData,
+            amount: i === installments - 1 ? lastAmount : eachAmount,
+            date,
+            account_id: null,
+            card_id: selectedCardId,
+            installments_total: installments,
+            installment_number: i + 1,
+            installment_group_id: groupId,
+            invoice_month: Invoice.addMonths(firstInvoice, i),
+          });
+        }
+        await Data.createTransactionsBatch(rows);
+        toast(`${installments} parcelas criadas`);
       } else {
+        // Criação simples (à vista, conta ou cartão)
+        const data = {
+          ...baseData,
+          amount,
+          date,
+          account_id: selectedSource === 'account' ? selectedAccountId : null,
+          card_id: selectedSource === 'card' ? selectedCardId : null,
+          installments_total: 1,
+          installment_number: 1,
+        };
+        if (selectedSource === 'card') {
+          const card = State.cards.find(c => c.id === selectedCardId);
+          if (card) data.invoice_month = Invoice.computeMonthString(date, card);
+        }
         await Data.createTransaction(data);
         toast('Transação adicionada');
       }
       Modal.close();
       Transactions.render();
       Dashboard.render();
+      if (document.getElementById('page-cards').classList.contains('active')) {
+        Cards.render();
+      }
     } catch (err) {
       toast('Erro: ' + err.message, 'error');
       btn.disabled = false;
@@ -2516,6 +3287,27 @@ function openTransactionForm(transaction = null) {
 
   if (isEdit) {
     document.getElementById('tx-delete').addEventListener('click', async () => {
+      // Se for parcela, perguntar se exclui só ela ou o grupo todo
+      if (transaction.installment_group_id && transaction.installments_total > 1) {
+        const choice = confirm(`Esta é a parcela ${transaction.installment_number}/${transaction.installments_total}. Clique OK pra excluir TODAS as parcelas, Cancelar pra excluir só esta.`);
+        try {
+          if (choice) {
+            const all = State.transactions.filter(x => x.installment_group_id === transaction.installment_group_id);
+            for (const r of all) await Data.deleteTransaction(r.id);
+            toast(`${all.length} parcelas excluídas`);
+          } else {
+            await Data.deleteTransaction(transaction.id);
+            toast('Parcela excluída');
+          }
+          Modal.close();
+          Transactions.render();
+          Dashboard.render();
+          if (document.getElementById('page-cards').classList.contains('active')) Cards.render();
+        } catch (err) {
+          toast('Erro: ' + err.message, 'error');
+        }
+        return;
+      }
       if (!confirm('Excluir esta transação?')) return;
       try {
         await Data.deleteTransaction(transaction.id);
@@ -2523,6 +3315,7 @@ function openTransactionForm(transaction = null) {
         Modal.close();
         Transactions.render();
         Dashboard.render();
+        if (document.getElementById('page-cards').classList.contains('active')) Cards.render();
       } catch (err) {
         toast('Erro: ' + err.message, 'error');
       }
@@ -2536,9 +3329,204 @@ function formatAmountInput(value) {
 }
 
 /* ============================================
-   DASHBOARD — Cálculos de saldo
+   CARDS PAGE — Lista de cartões + visualização de fatura
    ============================================ */
+const Cards = {
+  // Estado da página: 'list' = lista de cartões, 'detail' = fatura de 1 cartão
+  view: 'list',
+  selectedCardId: null,
+  selectedInvoiceMonth: null,
+
+  render() {
+    const container = document.getElementById('cards-page-content');
+
+    if (this.view === 'list') {
+      container.innerHTML = this.renderList();
+    } else {
+      container.innerHTML = this.renderDetail();
+      this.bindDetailEvents();
+    }
+  },
+
+  renderList() {
+    if (!State.cards.length) {
+      return `
+        <div class="empty-state">
+          <div class="empty-state-title">Nenhum cartão</div>
+          <p class="empty-state-text">Adicione seus cartões em <strong>Config → Cartões</strong>.</p>
+        </div>
+      `;
+    }
+
+    return State.cards.map(card => {
+      // Fatura aberta = próxima a vencer (já fechou ou vai fechar)
+      const todayStr = new Date().toISOString().split('T')[0];
+      const currentInvoice = Invoice.computeMonthString(todayStr, card);
+      const total = Invoice.getInvoiceTotal(card.id, currentInvoice);
+      const txCount = Invoice.getInvoiceTransactions(card.id, currentInvoice).length;
+
+      const closingDate = Invoice.nextClosingDate(card);
+      const dueDate = Invoice.nextDueDate(card);
+
+      return `
+        <div class="card-item" data-open-card="${card.id}">
+          <div class="card-item-header">
+            <div class="card-item-info">
+              <div class="card-item-name">
+                <span>💳 ${escapeHtml(card.name)}</span>
+                ${card.payment_mode === 'installments_only' ? '<span class="card-badge installments">Parcela</span>' : ''}
+              </div>
+              <div class="card-item-meta">
+                ${card.last_digits ? `<span>····${escapeHtml(card.last_digits)}</span><span>·</span>` : ''}
+                <span class="owner-tag ${card.owner}">${this.ownerLabel(card.owner)}</span>
+                <span>·</span>
+                <span>${txCount} ${txCount === 1 ? 'compra' : 'compras'}</span>
+              </div>
+            </div>
+            <div>
+              <div class="card-item-amount-label">Fatura aberta</div>
+              <div class="card-item-amount">${App.formatCurrency(total)}</div>
+            </div>
+          </div>
+          <div class="card-dates">
+            <div class="card-date-item">
+              <span class="card-date-label">Fecha em</span>
+              <span class="card-date-value">${this.formatShortDate(closingDate)}</span>
+            </div>
+            <div class="card-date-item">
+              <span class="card-date-label">Vence em</span>
+              <span class="card-date-value">${this.formatShortDate(dueDate)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  renderDetail() {
+    const card = State.cards.find(c => c.id === this.selectedCardId);
+    if (!card) {
+      this.view = 'list';
+      return this.renderList();
+    }
+
+    const months = Invoice.getCardInvoiceMonths(card.id);
+    // Adicionar mês atual se não estiver na lista
+    const todayStr = new Date().toISOString().split('T')[0];
+    const currentMonth = Invoice.computeMonthString(todayStr, card);
+    if (!months.includes(currentMonth)) months.unshift(currentMonth);
+
+    if (!this.selectedInvoiceMonth || !months.includes(this.selectedInvoiceMonth)) {
+      this.selectedInvoiceMonth = currentMonth;
+    }
+
+    const txs = Invoice.getInvoiceTransactions(card.id, this.selectedInvoiceMonth)
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+    const total = txs.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const txCount = txs.length;
+
+    return `
+      <div class="invoice-header">
+        <button class="invoice-back" id="invoice-back" aria-label="Voltar">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="invoice-title-block">
+          <div class="invoice-card-name">${escapeHtml(card.name)}</div>
+          <div class="invoice-card-sub">
+            ${card.last_digits ? `····${escapeHtml(card.last_digits)} · ` : ''}Fecha dia ${card.closing_day} · Vence dia ${card.due_day}
+          </div>
+        </div>
+      </div>
+
+      <div class="invoice-month-tabs" id="invoice-month-tabs">
+        ${months.map(m => `
+          <button class="invoice-month-tab ${m === this.selectedInvoiceMonth ? 'active' : ''}" data-month="${m}">
+            ${Invoice.formatMonth(m)}
+          </button>
+        `).join('')}
+      </div>
+
+      <div class="invoice-summary">
+        <div class="invoice-summary-label">Total da fatura · ${Invoice.formatMonth(this.selectedInvoiceMonth)}</div>
+        <div class="invoice-summary-amount">${App.formatCurrency(total)}</div>
+        <div class="invoice-summary-detail">
+          <span><strong>${txCount}</strong> ${txCount === 1 ? 'lançamento' : 'lançamentos'}</span>
+          ${card.payment_mode === 'installments_only' ? '<span>· Modo parcela mensal</span>' : ''}
+        </div>
+      </div>
+
+      ${txs.length === 0 ? `
+        <div class="empty-state">
+          <p class="empty-state-text">Nenhum lançamento nesta fatura</p>
+        </div>
+      ` : `
+        <div class="item-list" id="invoice-tx-list">
+          ${txs.map(t => this.invoiceTxRow(t)).join('')}
+        </div>
+      `}
+    `;
+  },
+
+  invoiceTxRow(t) {
+    const cat = State.categories.find(c => c.id === t.category_id);
+    const icon = cat?.icon || '💸';
+    const title = t.description || cat?.name || 'Sem categoria';
+    const installmentLabel = t.installments_total > 1
+      ? `<span class="card-badge installments">${t.installment_number}/${t.installments_total}</span>`
+      : '';
+
+    return `
+      <div class="tx-row" data-edit-tx="${t.id}">
+        <div class="tx-icon" style="${cat?.color ? `background:${cat.color}22;` : ''}">${icon}</div>
+        <div class="tx-info">
+          <div class="tx-title">${escapeHtml(title)}</div>
+          <div class="tx-meta">
+            <span>${this.formatShortDate(this.parseDate(t.date))}</span>
+            ${installmentLabel ? `<span>·</span>${installmentLabel}` : ''}
+            <span>·</span>
+            <span class="owner-tag ${t.owner}">${this.ownerLabel(t.owner)}</span>
+          </div>
+        </div>
+        <div class="tx-amount expense">-${App.formatCurrency(t.amount)}</div>
+      </div>
+    `;
+  },
+
+  bindDetailEvents() {
+    const back = document.getElementById('invoice-back');
+    if (back) back.addEventListener('click', () => {
+      this.view = 'list';
+      this.selectedCardId = null;
+      this.selectedInvoiceMonth = null;
+      this.render();
+    });
+
+    document.querySelectorAll('.invoice-month-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        this.selectedInvoiceMonth = tab.dataset.month;
+        this.render();
+      });
+    });
+  },
+
+  ownerLabel(o) {
+    return o === 'pv' ? 'PV' : o === 'gigi' ? 'Gigi' : 'Compartilhado';
+  },
+  formatShortDate(d) {
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  },
+  parseDate(s) {
+    if (!s) return new Date();
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  },
+};
+
+
 const Dashboard = {
+  /* Calcula saldos das contas considerando transações de Conta (não cartão).
+     Cartões serão integrados no Dashboard novo da Etapa 4.5. */
   render() {
     const accountsBalance = this.calcAccountsBalance();
     const monthStats = this.calcMonthStats();
@@ -2564,13 +3552,15 @@ const Dashboard = {
   },
 
   calcAccountsBalance() {
-    // Saldo = saldo inicial da conta + soma das transações
+    // Saldo = saldo inicial da conta + soma das transações da conta
+    // (transações de cartão NÃO afetam o saldo da conta — vão pra fatura)
     const byAccount = {};
     State.accounts.forEach(a => {
       byAccount[a.id] = { balance: Number(a.initial_balance) || 0, owner: a.owner };
     });
 
     State.transactions.forEach(t => {
+      if (!t.account_id || t.card_id) return; // só conta direto, ignora cartão
       if (!byAccount[t.account_id]) return;
       const v = Number(t.amount) || 0;
       byAccount[t.account_id].balance += (t.type === 'income' ? v : -v);
@@ -2582,7 +3572,6 @@ const Dashboard = {
       if (owner === 'pv') byOwner.pv += balance;
       else if (owner === 'gigi') byOwner.gigi += balance;
       else if (owner === 'shared') {
-        // Divide igualmente entre os dois pra exibição
         byOwner.pv += balance / 2;
         byOwner.gigi += balance / 2;
       }
@@ -2652,6 +3641,7 @@ document.addEventListener('click', (e) => {
     const what = addBtn.dataset.add;
     if (what === 'category') openCategoryForm(null, addBtn.dataset.type || 'expense');
     if (what === 'account') openAccountForm(null);
+    if (what === 'card') openCardForm(null);
     return;
   }
 
@@ -2668,6 +3658,24 @@ document.addEventListener('click', (e) => {
     const id = editAcc.dataset.editAccount;
     const a = State.accounts.find(x => x.id === id);
     if (a) openAccountForm(a);
+    return;
+  }
+
+  const editCard = e.target.closest('[data-edit-card]');
+  if (editCard) {
+    const id = editCard.dataset.editCard;
+    const c = State.cards.find(x => x.id === id);
+    if (c) openCardForm(c);
+    return;
+  }
+
+  // Abrir cartão (página detail)
+  const openCard = e.target.closest('[data-open-card]');
+  if (openCard) {
+    Cards.view = 'detail';
+    Cards.selectedCardId = openCard.dataset.openCard;
+    Cards.selectedInvoiceMonth = null;
+    Cards.render();
     return;
   }
 
