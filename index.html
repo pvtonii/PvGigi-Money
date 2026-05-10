@@ -4711,11 +4711,11 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Filtro de owner (cíclico: all → pv → gigi → shared → all)
+  // Owner filter (cycle: all → pv → gigi → shared → all)
   const ownerFilter = e.target.closest('.tx-filter[data-owner-filter]');
   if (ownerFilter) {
     const cycle = ['all', 'pv', 'gigi', 'shared'];
-    const labels = { all: 'Todos', pv: 'PV', gigi: 'Gigi', shared: 'Ambos' };
+    const labels = { all: 'Anyone', pv: 'PV', gigi: 'Gigi', shared: 'Shared' };
     const current = Transactions.filterOwner;
     const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
     Transactions.filterOwner = next;
