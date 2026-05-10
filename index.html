@@ -480,12 +480,104 @@ h1, h2, h3 {
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-lg);
-  z-index: 15;
+  z-index: 16;
   transition: transform var(--duration) var(--ease);
 }
 .fab:hover { transform: scale(1.05); }
 .fab:active { transform: scale(0.95); }
-.fab svg { width: 24px; height: 24px; stroke-width: 2; }
+.fab svg {
+  width: 24px; height: 24px; stroke-width: 2;
+  transition: transform 240ms var(--ease-out);
+}
+.fab.expanded svg { transform: rotate(45deg); }
+
+/* FAB menu (options that pop up) */
+.fab-menu {
+  position: fixed;
+  bottom: calc(80px + var(--space-3) + env(safe-area-inset-bottom) + 56px + var(--space-3));
+  right: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 15;
+  align-items: flex-end;
+}
+.fab-menu.hidden {
+  display: none;
+}
+.fab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-default);
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  transition: all var(--duration);
+  animation: fabMenuPop 240ms var(--ease-out) backwards;
+}
+.fab-menu-item:nth-child(1) { animation-delay: 40ms; }
+.fab-menu-item:nth-child(2) { animation-delay: 80ms; }
+.fab-menu-item:hover {
+  background: var(--bg-hover);
+  transform: translateX(-2px);
+}
+.fab-menu-icon {
+  width: 32px; height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+.fab-menu-label {
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+@keyframes fabMenuPop {
+  from { opacity: 0; transform: translateY(8px) scale(0.92); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* FAB backdrop (clicks outside to close menu) */
+.fab-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 14;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration);
+}
+.fab-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Transfer badge */
+.transfer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  font-size: 0.625rem;
+  font-weight: 500;
+  background: rgba(167,139,250,0.15);
+  color: var(--shared-color);
+  letter-spacing: 0.02em;
+}
+.tx-amount.transfer {
+  color: var(--text-secondary);
+}
 
 .bottom-nav {
   position: fixed;
@@ -1887,8 +1979,22 @@ html { scroll-behavior: smooth; }
     </section>
   </main>
 
-  <button class="fab" id="fab-add" aria-label="Add transaction">
-    <svg viewBox="0 0 24 24" fill="none">
+  <!-- FAB backdrop (closes menu when clicking outside) -->
+  <div class="fab-backdrop" id="fab-backdrop"></div>
+
+  <!-- FAB menu (expanded options) -->
+  <div class="fab-menu hidden" id="fab-menu">
+    <button class="fab-menu-item" data-fab-action="transaction">
+      <span class="fab-menu-icon">💸</span>
+      <span class="fab-menu-label">Transaction</span>
+    </button>
+    <button class="fab-menu-item" data-fab-action="transfer">
+      <span class="fab-menu-icon">↔️</span>
+      <span class="fab-menu-label">Transfer</span>
+    </button>
+  </div>
+  <button class="fab" id="fab-add" aria-label="Add">
+    <svg viewBox="0 0 24 24" fill="none" id="fab-icon">
       <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </svg>
   </button>
@@ -2266,6 +2372,89 @@ const Data = {
     const { error } = await db.from('transactions').delete().eq('id', id);
     if (error) { Status.set('disconnected', 'Delete failed'); throw error; }
     State.transactions = State.transactions.filter(t => t.id !== id);
+    this._setReady();
+  },
+
+  // Transfers — creates 2 linked transactions (out + in)
+  async createTransfer({ amount, fromAccountId, toAccountId, description, date, owner }) {
+    if (!db) throw new Error('Supabase not configured');
+    Status.set('syncing', 'Saving transfer…');
+
+    const groupId = crypto.randomUUID();
+    const fromAcc = State.accounts.find(a => a.id === fromAccountId);
+    const toAcc = State.accounts.find(a => a.id === toAccountId);
+    const baseDesc = description || `Transfer: ${fromAcc?.name || ''} → ${toAcc?.name || ''}`;
+
+    const rows = [
+      // Out (expense from source)
+      {
+        type: 'expense', amount, date, description: baseDesc,
+        account_id: fromAccountId, card_id: null,
+        category_id: null, owner,
+        is_transfer: true, transfer_group_id: groupId,
+        installments_total: 1, installment_number: 1,
+        created_by: Auth.getSession()?.userId,
+      },
+      // In (income to destination)
+      {
+        type: 'income', amount, date, description: baseDesc,
+        account_id: toAccountId, card_id: null,
+        category_id: null, owner,
+        is_transfer: true, transfer_group_id: groupId,
+        installments_total: 1, installment_number: 1,
+        created_by: Auth.getSession()?.userId,
+      },
+    ];
+
+    const { data, error } = await db.from('transactions').insert(rows).select();
+    if (error) { Status.set('disconnected', 'Save failed'); throw error; }
+    (data || []).forEach(r => State.transactions.unshift(r));
+    this._setReady();
+    return data;
+  },
+
+  // Update a transfer pair
+  async updateTransfer(groupId, { amount, fromAccountId, toAccountId, description, date, owner }) {
+    if (!db) throw new Error('Supabase not configured');
+    Status.set('syncing', 'Updating…');
+
+    const fromAcc = State.accounts.find(a => a.id === fromAccountId);
+    const toAcc = State.accounts.find(a => a.id === toAccountId);
+    const baseDesc = description || `Transfer: ${fromAcc?.name || ''} → ${toAcc?.name || ''}`;
+
+    // Find the two existing rows
+    const pair = State.transactions.filter(t => t.transfer_group_id === groupId);
+    const out = pair.find(t => t.type === 'expense');
+    const inn = pair.find(t => t.type === 'income');
+    if (!out || !inn) throw new Error('Transfer pair not found');
+
+    const baseUpdate = { amount, date, description: baseDesc, owner };
+
+    const [r1, r2] = await Promise.all([
+      db.from('transactions')
+        .update({ ...baseUpdate, account_id: fromAccountId })
+        .eq('id', out.id).select().single(),
+      db.from('transactions')
+        .update({ ...baseUpdate, account_id: toAccountId })
+        .eq('id', inn.id).select().single(),
+    ]);
+    if (r1.error) { Status.set('disconnected', 'Update failed'); throw r1.error; }
+    if (r2.error) { Status.set('disconnected', 'Update failed'); throw r2.error; }
+
+    // Update local state
+    [r1.data, r2.data].forEach(updated => {
+      const idx = State.transactions.findIndex(x => x.id === updated.id);
+      if (idx >= 0) State.transactions[idx] = updated;
+    });
+    this._setReady();
+  },
+
+  async deleteTransfer(groupId) {
+    if (!db) throw new Error('Supabase not configured');
+    Status.set('syncing', 'Deleting…');
+    const { error } = await db.from('transactions').delete().eq('transfer_group_id', groupId);
+    if (error) { Status.set('disconnected', 'Delete failed'); throw error; }
+    State.transactions = State.transactions.filter(t => t.transfer_group_id !== groupId);
     this._setReady();
   },
 };
@@ -3136,7 +3325,8 @@ const Transactions = {
     // Mês atual (do mais recente das transações filtradas, ou hoje)
     const today = new Date();
     const ym = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-    const monthTxs = txs.filter(t => (t.date || '').startsWith(ym));
+    // Exclude transfers from income/expense totals (they're not real movement)
+    const monthTxs = txs.filter(t => (t.date || '').startsWith(ym) && !t.is_transfer);
 
     let income = 0, expense = 0;
     monthTxs.forEach(t => {
@@ -3184,13 +3374,19 @@ const Transactions = {
 
     container.innerHTML = sortedDays.map(day => {
       const dayTxs = groups[day];
+      // For day total, ignore the "income" side of transfers (it's the same money, just moved)
+      // and ignore transfers entirely (neither side counts as gain/loss)
       const dayTotal = dayTxs.reduce((sum, t) => {
+        if (t.is_transfer) return sum;
         const v = Number(t.amount) || 0;
         return sum + (t.type === 'income' ? v : -v);
       }, 0);
 
       const totalClass = dayTotal >= 0 ? 'text-success' : 'text-danger';
       const totalSign = dayTotal >= 0 ? '+' : '';
+
+      // Filter out transfer income-sides (transferRow returns '' for them anyway, but cleaner)
+      const visibleTxs = dayTxs.filter(t => !(t.is_transfer && t.type === 'income'));
 
       return `
         <div class="day-group">
@@ -3199,15 +3395,20 @@ const Transactions = {
               <span class="day-label">${this.formatDayLabel(day)}</span>
               <span class="day-label-secondary">${this.formatDayWeekday(day)}</span>
             </div>
-            <span class="day-total ${totalClass}">${totalSign}${App.formatCurrency(dayTotal)}</span>
+            <span class="day-total ${totalClass}">${dayTotal === 0 ? '—' : totalSign + App.formatCurrency(dayTotal)}</span>
           </div>
-          ${dayTxs.map(t => this.txRow(t)).join('')}
+          ${visibleTxs.map(t => this.txRow(t)).join('')}
         </div>
       `;
     }).join('');
   },
 
   txRow(t) {
+    // Special rendering for transfers
+    if (t.is_transfer) {
+      return this.transferRow(t);
+    }
+
     const cat = State.categories.find(c => c.id === t.category_id);
     const acc = State.accounts.find(a => a.id === t.account_id);
     const card = State.cards.find(c => c.id === t.card_id);
@@ -3234,6 +3435,37 @@ const Transactions = {
           </div>
         </div>
         <div class="tx-amount ${amountClass}">${sign}${App.formatCurrency(t.amount)}</div>
+      </div>
+    `;
+  },
+
+  /** Renderiza linha de transferência. Mostra apenas a "saída" pra evitar duplicar
+      a transferência na lista. Clica → edita o par. */
+  transferRow(t) {
+    // Skip the "income" side — only show outgoing as the canonical row
+    if (t.type !== 'expense') return '';
+
+    const fromAcc = State.accounts.find(a => a.id === t.account_id);
+    // Find pair to get destination account
+    const pair = State.transactions.find(x =>
+      x.transfer_group_id === t.transfer_group_id && x.type === 'income'
+    );
+    const toAcc = pair ? State.accounts.find(a => a.id === pair.account_id) : null;
+
+    const title = t.description || `${fromAcc?.name || '?'} → ${toAcc?.name || '?'}`;
+
+    return `
+      <div class="tx-row" data-edit-transfer="${t.transfer_group_id}">
+        <div class="tx-icon">↔️</div>
+        <div class="tx-info">
+          <div class="tx-title">${escapeHtml(title)}</div>
+          <div class="tx-meta">
+            <span class="transfer-badge">↔ Transfer</span>
+            <span>·</span>
+            <span class="owner-tag ${t.owner}">${this.ownerShort(t.owner)}</span>
+          </div>
+        </div>
+        <div class="tx-amount transfer">${App.formatCurrency(t.amount)}</div>
       </div>
     `;
   },
@@ -3790,6 +4022,203 @@ function formatAmountInput(value) {
   return Number(value).toFixed(2);
 }
 
+/* ============================================
+   TRANSFER FORM — Move money between accounts
+   ============================================ */
+function openTransferForm(transferGroupId = null) {
+  const isEdit = !!transferGroupId;
+  const today = new Date().toISOString().split('T')[0];
+
+  // Load existing pair if editing
+  let existing = null;
+  if (isEdit) {
+    const pair = State.transactions.filter(t => t.transfer_group_id === transferGroupId);
+    const out = pair.find(t => t.type === 'expense');
+    const inn = pair.find(t => t.type === 'income');
+    if (!out || !inn) {
+      toast('Transfer not found', 'error');
+      return;
+    }
+    existing = {
+      amount: out.amount,
+      fromAccountId: out.account_id,
+      toAccountId: inn.account_id,
+      description: out.description || '',
+      date: out.date,
+      owner: out.owner,
+    };
+  }
+
+  const t = existing || {
+    amount: '',
+    fromAccountId: State.accounts[0]?.id || null,
+    toAccountId: State.accounts[1]?.id || null,
+    description: '',
+    date: today,
+    owner: Auth.getSession()?.userId || 'shared',
+  };
+
+  Modal.open(isEdit ? 'Edit transfer' : 'New transfer', `
+    <!-- Amount -->
+    <input class="amount-input" id="tr-amount" type="text" inputmode="decimal" placeholder="$0.00"
+           value="${t.amount ? formatAmountInput(t.amount) : ''}" autocomplete="off">
+
+    <!-- From -->
+    <div class="form-field">
+      <label class="form-label">From</label>
+      <div class="picker-grid" id="tr-from-picker"></div>
+    </div>
+
+    <!-- Arrow visual -->
+    <div style="text-align:center; color: var(--text-tertiary); font-size: 1.25rem; margin: var(--space-3) 0;">↓</div>
+
+    <!-- To -->
+    <div class="form-field">
+      <label class="form-label">To</label>
+      <div class="picker-grid" id="tr-to-picker"></div>
+    </div>
+
+    <!-- More options -->
+    <button type="button" class="more-options-toggle" id="tr-more-toggle">
+      <span>More options</span>
+      <svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="more-options-content" id="tr-more-content">
+      <div class="form-field">
+        <label class="form-label">Note</label>
+        <input class="form-input" id="tr-description" value="${escapeHtml(t.description || '')}" placeholder="Optional">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Date</label>
+        <input class="form-input" id="tr-date" type="date" value="${t.date}">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Initiated by</label>
+        ${ownerToggleHtml(t.owner)}
+      </div>
+    </div>
+
+    <div class="flex gap-3" style="margin-top: var(--space-5);">
+      ${isEdit ? `<button class="btn btn-danger" id="tr-delete">Delete</button>` : ''}
+      <button class="btn btn-primary" id="tr-save">${isEdit ? 'Save' : 'Transfer'}</button>
+    </div>
+  `);
+
+  bindOwnerToggle();
+
+  let selectedFrom = t.fromAccountId;
+  let selectedTo = t.toAccountId;
+
+  // More options auto-expand on edit if has note or non-default date
+  const moreToggle = document.getElementById('tr-more-toggle');
+  const moreContent = document.getElementById('tr-more-content');
+  if (isEdit && (t.description || t.date !== today)) {
+    moreToggle.classList.add('expanded');
+    moreContent.classList.add('expanded');
+  }
+  moreToggle.addEventListener('click', () => {
+    moreToggle.classList.toggle('expanded');
+    moreContent.classList.toggle('expanded');
+  });
+
+  function renderAccountPicker(containerId, selectedId, otherSelectedId, onSelect) {
+    const grid = document.getElementById(containerId);
+    const typeIcons = { checking: '🏦', savings: '💰', cash: '💵', investment: '📈' };
+
+    grid.innerHTML = State.accounts.map(a => {
+      const disabled = a.id === otherSelectedId;
+      return `
+        <div class="picker-item ${a.id === selectedId ? 'selected' : ''}"
+             data-acc-id="${a.id}"
+             style="${disabled ? 'opacity:0.3; pointer-events:none;' : ''}">
+          <div class="picker-emoji">${typeIcons[a.type] || '🏦'}</div>
+          <div class="picker-label">${escapeHtml(a.name)}</div>
+        </div>
+      `;
+    }).join('');
+
+    grid.querySelectorAll('.picker-item').forEach(el => {
+      el.addEventListener('click', () => {
+        if (el.style.pointerEvents === 'none') return;
+        onSelect(el.dataset.accId);
+      });
+    });
+  }
+
+  function rerenderPickers() {
+    renderAccountPicker('tr-from-picker', selectedFrom, selectedTo, (id) => {
+      selectedFrom = id;
+      rerenderPickers();
+    });
+    renderAccountPicker('tr-to-picker', selectedTo, selectedFrom, (id) => {
+      selectedTo = id;
+      rerenderPickers();
+    });
+  }
+  rerenderPickers();
+
+  setTimeout(() => document.getElementById('tr-amount').focus(), 300);
+
+  // Save
+  document.getElementById('tr-save').addEventListener('click', async () => {
+    const btn = document.getElementById('tr-save');
+    const amountStr = document.getElementById('tr-amount').value.replace(/[^0-9.,]/g, '').replace(',', '.');
+    const amount = parseFloat(amountStr);
+    const description = document.getElementById('tr-description').value.trim();
+    const date = document.getElementById('tr-date').value;
+    const owner = getSelectedOwner();
+
+    if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
+    if (!selectedFrom) return toast('Please select source account', 'error');
+    if (!selectedTo) return toast('Please select destination account', 'error');
+    if (selectedFrom === selectedTo) return toast('From and To must be different', 'error');
+    if (!date) return toast('Please select a date', 'error');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span>';
+
+    try {
+      const payload = {
+        amount,
+        fromAccountId: selectedFrom,
+        toAccountId: selectedTo,
+        description,
+        date,
+        owner,
+      };
+      if (isEdit) {
+        await Data.updateTransfer(transferGroupId, payload);
+        toast('Transfer updated');
+      } else {
+        await Data.createTransfer(payload);
+        toast('Transfer saved');
+      }
+      Modal.close();
+      Transactions.render();
+      Dashboard.render();
+    } catch (err) {
+      toast('Error: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = isEdit ? 'Save' : 'Transfer';
+    }
+  });
+
+  if (isEdit) {
+    document.getElementById('tr-delete').addEventListener('click', async () => {
+      if (!confirm('Delete this transfer?')) return;
+      try {
+        await Data.deleteTransfer(transferGroupId);
+        toast('Transfer deleted');
+        Modal.close();
+        Transactions.render();
+        Dashboard.render();
+      } catch (err) {
+        toast('Error: ' + err.message, 'error');
+      }
+    });
+  }
+}
+
 /**
  * Move uma transação de cartão pra outra fatura (invoice_month).
  * Usado no fluxo de "zona ambígua" ou edição manual.
@@ -4079,7 +4508,10 @@ const Dashboard = {
   calcMonthStats() {
     const today = new Date();
     const ym = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-    const monthTxs = State.transactions.filter(t => (t.date || '').startsWith(ym));
+    // Transfers are NOT real income/expense — exclude them
+    const monthTxs = State.transactions.filter(t =>
+      (t.date || '').startsWith(ym) && !t.is_transfer
+    );
 
     let income = 0, expense = 0;
     monthTxs.forEach(t => {
@@ -4160,10 +4592,44 @@ document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => showPage(item.dataset.page));
 });
 
+// FAB — toggle menu
+const FabMenu = {
+  open: false,
+  toggle() {
+    this.open = !this.open;
+    document.getElementById('fab-menu').classList.toggle('hidden', !this.open);
+    document.getElementById('fab-backdrop').classList.toggle('active', this.open);
+    document.getElementById('fab-add').classList.toggle('expanded', this.open);
+  },
+  close() {
+    this.open = false;
+    document.getElementById('fab-menu').classList.add('hidden');
+    document.getElementById('fab-backdrop').classList.remove('active');
+    document.getElementById('fab-add').classList.remove('expanded');
+  },
+};
+
 document.getElementById('fab-add').addEventListener('click', () => {
   if (!db) return toast('Set up Supabase first (Connection tab)', 'error');
   if (State.accounts.length === 0) return toast('Add at least one account first', 'error');
-  openTransactionForm();
+  FabMenu.toggle();
+});
+
+document.getElementById('fab-backdrop').addEventListener('click', () => FabMenu.close());
+
+document.querySelectorAll('[data-fab-action]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const action = btn.dataset.fabAction;
+    FabMenu.close();
+    if (action === 'transaction') {
+      openTransactionForm();
+    } else if (action === 'transfer') {
+      if (State.accounts.length < 2) {
+        return toast('You need at least 2 accounts to transfer', 'error');
+      }
+      openTransferForm();
+    }
+  });
 });
 
 document.querySelectorAll('.tab').forEach(tab => {
@@ -4225,6 +4691,13 @@ document.addEventListener('click', (e) => {
     const id = editTx.dataset.editTx;
     const t = State.transactions.find(x => x.id === id);
     if (t) openTransactionForm(t);
+    return;
+  }
+
+  // Open transfer for editing
+  const editTransfer = e.target.closest('[data-edit-transfer]');
+  if (editTransfer) {
+    openTransferForm(editTransfer.dataset.editTransfer);
     return;
   }
 
