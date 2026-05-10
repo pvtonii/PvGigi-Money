@@ -1666,52 +1666,6 @@ h1, h2, h3 {
   width: 14px; height: 14px;
 }
 
-/* ===== UPDATE BANNER ===== */
-.update-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-4);
-  background: var(--info);
-  color: white;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  animation: slideDown 300ms var(--ease-out);
-}
-.update-banner-text {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.update-banner-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: white;
-  animation: pulse-warning 1.4s ease-in-out infinite;
-  flex-shrink: 0;
-}
-.update-banner-btn {
-  background: rgba(255,255,255,0.2);
-  color: white;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  font-weight: 600;
-  transition: background var(--duration);
-}
-.update-banner-btn:hover {
-  background: rgba(255,255,255,0.3);
-}
-@keyframes slideDown {
-  from { transform: translateY(-100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -1781,15 +1735,6 @@ html { scroll-behavior: smooth; }
 
 <!-- APP -->
 <div class="screen" id="screen-app">
-  <!-- Update banner (shown when new SW version is available) -->
-  <div class="update-banner hidden" id="update-banner">
-    <span class="update-banner-text">
-      <span class="update-banner-dot"></span>
-      Update available
-    </span>
-    <button class="update-banner-btn" id="update-banner-btn">Update now</button>
-  </div>
-
   <header class="app-header fade-in">
     <div class="header-title-wrap">
       <span class="status-dot disconnected" id="status-dot" title="Supabase status"></span>
@@ -4776,58 +4721,17 @@ Status.render();
 if (Auth.isLoggedIn()) enterApp();
 else showScreen('login');
 
-// Service worker (PWA) — with update detection
+// Service Worker cleanup — uninstall any SW from previous versions
+// (we removed PWA features; the sw.js file now self-destructs)
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then(registration => {
-      // Already a waiting SW? Show banner.
-      if (registration.waiting) {
-        showUpdateBanner(registration.waiting);
-      }
-
-      // Listen for new SW being installed
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        if (!newWorker) return;
-        newWorker.addEventListener('statechange', () => {
-          // New SW installed, but old one still controls page → show banner
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            showUpdateBanner(newWorker);
-          }
-        });
-      });
-
-      // Periodic check for updates (every 30 min while app is open)
-      setInterval(() => {
-        registration.update().catch(() => {});
-      }, 30 * 60 * 1000);
-    }).catch(err => {
-      console.warn('SW registration failed:', err);
-    });
-
-    // When the new SW takes over, reload to use new version
-    let reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (reloading) return;
-      reloading = true;
-      window.location.reload();
-    });
-  });
-}
-
-function showUpdateBanner(worker) {
-  const banner = document.getElementById('update-banner');
-  if (!banner) return;
-  banner.classList.remove('hidden');
-
-  const btn = document.getElementById('update-banner-btn');
-  if (btn) {
-    btn.onclick = () => {
-      btn.disabled = true;
-      btn.textContent = 'Updating…';
-      // Tell SW to take over → triggers controllerchange → page reloads
-      worker.postMessage({ type: 'SKIP_WAITING' });
-    };
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(reg => reg.unregister());
+  }).catch(() => {});
+  // Also clear old caches
+  if (window.caches) {
+    caches.keys().then(keys => {
+      keys.filter(k => k.startsWith('finance-')).forEach(k => caches.delete(k));
+    }).catch(() => {});
   }
 }
 </script>
