@@ -9,7 +9,7 @@
    - User clicks → page sends SKIP_WAITING → SW activates and reloads.
    ================================================================ */
 
-const CACHE_VERSION = 'finance-v6';   // bump this on every release
+const CACHE_VERSION = 'finance-v7';   // bump this on every release
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 // Files always cached on install
