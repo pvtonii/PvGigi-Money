@@ -2683,7 +2683,6 @@ const Settings = {
 
   cardConfigRow(c) {
     const acc = State.accounts.find(a => a.id === c.account_id);
-    const modeLabel = c.payment_mode === 'installments_only' ? 'Per-installment' : 'Full statement';
     return `
       <div class="item-row" data-edit-card="${c.id}">
         <div class="item-icon">💳</div>
@@ -2693,8 +2692,6 @@ const Settings = {
             <span class="owner-tag ${c.owner}">${this.ownerLabel(c.owner)}</span>
             <span>·</span>
             <span>Closes ${c.closing_day} · Due ${c.due_day}</span>
-            <span>·</span>
-            <span>${modeLabel}</span>
           </div>
         </div>
         <div class="item-amount">${App.formatCurrency(c.credit_limit)}</div>
@@ -2993,14 +2990,6 @@ function openCardForm(card = null) {
       <div class="form-help">Account that pays the bill (optional)</div>
     </div>
     <div class="form-field">
-      <label class="form-label">Statement mode</label>
-      <select class="form-select" id="card-mode">
-        <option value="full" ${c.payment_mode === 'full' ? 'selected' : ''}>Full statement (regular card)</option>
-        <option value="installments_only" ${c.payment_mode === 'installments_only' ? 'selected' : ''}>Per-installment (Apple Card / Interest Savings)</option>
-      </select>
-      <div class="form-help">Cards like Apple Card charge only the monthly installment, not the full balance.</div>
-    </div>
-    <div class="form-field">
       <label class="form-label">Who uses</label>
       ${ownerToggleHtml(c.owner)}
     </div>
@@ -3021,7 +3010,6 @@ function openCardForm(card = null) {
     const closing_day = parseInt(document.getElementById('card-closing').value, 10);
     const due_day = parseInt(document.getElementById('card-due').value, 10);
     const account_id = document.getElementById('card-account').value || null;
-    const payment_mode = document.getElementById('card-mode').value;
     const owner = getSelectedOwner();
 
     if (!name) return toast('Please enter a name', 'error');
@@ -3035,7 +3023,7 @@ function openCardForm(card = null) {
       const data = {
         name, brand: brand || null, last_digits: last_digits || null,
         credit_limit, closing_day, due_day, account_id,
-        payment_mode, owner, created_by: Auth.getSession()?.userId,
+        payment_mode: 'full', owner, created_by: Auth.getSession()?.userId,
       };
       if (isEdit) {
         await Data.updateCard(card.id, data);
@@ -3809,7 +3797,6 @@ const Cards = {
             <div class="card-item-info">
               <div class="card-item-name">
                 <span>💳 ${escapeHtml(card.name)}</span>
-                ${card.payment_mode === 'installments_only' ? '<span class="card-badge installments">Per-installment</span>' : ''}
               </div>
               <div class="card-item-meta">
                 ${card.last_digits ? `<span>····${escapeHtml(card.last_digits)}</span><span>·</span>` : ''}
@@ -3887,7 +3874,6 @@ const Cards = {
         <div class="invoice-summary-amount">${App.formatCurrency(total)}</div>
         <div class="invoice-summary-detail">
           <span><strong>${txCount}</strong> ${txCount === 1 ? "entry" : "entries"}</span>
-          ${card.payment_mode === 'installments_only' ? '<span>· Per-installment mode</span>' : ''}
         </div>
       </div>
 
@@ -4072,7 +4058,7 @@ const Dashboard = {
             <div class="dash-card-summary-amount">${App.formatCurrency(dueNow)}</div>
           </div>
           <div class="dash-card-summary-meta">
-            ${dueNow > 0 ? 'due this month' : 'no bill this month'}${card.payment_mode === 'installments_only' ? ' · per-installment' : ''}
+            ${dueNow > 0 ? 'due this month' : 'no bill this month'}
           </div>
           <div class="credit-bar-container">
             <div class="credit-bar-track">
