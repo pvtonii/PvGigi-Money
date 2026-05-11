@@ -1930,6 +1930,7 @@ html { scroll-behavior: smooth; }
         <button class="tx-filter active" data-filter="all">All</button>
         <button class="tx-filter" data-filter="income">Income</button>
         <button class="tx-filter" data-filter="expense">Expenses</button>
+        <button class="tx-filter" data-filter="transfer">Transfers</button>
         <button class="tx-filter" data-owner-filter="all">
           <span style="font-size:0.6875rem;">Anyone</span>
         </button>
@@ -3543,15 +3544,28 @@ function openSubscriptionForm(subscription = null, defaultType = 'expense') {
    TRANSACTIONS — Renderização da página
    ============================================ */
 const Transactions = {
-  filterType: 'all',     // 'all' | 'income' | 'expense'
+  filterType: 'all',     // 'all' | 'income' | 'expense' | 'transfer'
   filterOwner: 'all',    // 'all' | 'pv' | 'gigi' | 'shared'
+
+  /** Returns true if this transaction is a transfer (internal or external) */
+  isTransferTx(t) {
+    return !!t.is_transfer || !!t.external_to;
+  },
 
   render() {
     let txs = State.transactions;
 
-    if (this.filterType !== 'all') {
-      txs = txs.filter(t => t.type === this.filterType);
+    if (this.filterType === 'all') {
+      // pass — show everything
+    } else if (this.filterType === 'transfer') {
+      txs = txs.filter(t => this.isTransferTx(t));
+    } else if (this.filterType === 'income') {
+      txs = txs.filter(t => t.type === 'income' && !this.isTransferTx(t));
+    } else if (this.filterType === 'expense') {
+      // Real expenses only — exclude transfers and card payments
+      txs = txs.filter(t => t.type === 'expense' && !this.isTransferTx(t) && !t.is_payment);
     }
+
     if (this.filterOwner !== 'all') {
       txs = txs.filter(t => t.owner === this.filterOwner);
     }
@@ -3564,8 +3578,10 @@ const Transactions = {
     // Mês atual (do mais recente das transações filtradas, ou hoje)
     const today = new Date();
     const ym = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-    // Exclude transfers and card payments from income/expense totals (not real movement)
-    const monthTxs = txs.filter(t => (t.date || '').startsWith(ym) && !t.is_transfer && !t.is_payment);
+    // Exclude transfers (internal + external) and card payments from income/expense totals
+    const monthTxs = txs.filter(t =>
+      (t.date || '').startsWith(ym) && !this.isTransferTx(t) && !t.is_payment
+    );
 
     let income = 0, expense = 0;
     monthTxs.forEach(t => {
@@ -3643,9 +3659,13 @@ const Transactions = {
   },
 
   txRow(t) {
-    // Special rendering for transfers
+    // Special rendering for internal transfers
     if (t.is_transfer) {
       return this.transferRow(t);
+    }
+    // Special rendering for external transfers
+    if (t.external_to) {
+      return this.externalTransferRow(t);
     }
 
     const cat = State.categories.find(c => c.id === t.category_id);
@@ -3721,6 +3741,33 @@ const Transactions = {
           ${noteLine}
         </div>
         <div class="tx-amount transfer">${App.formatCurrency(t.amount)}</div>
+      </div>
+    `;
+  },
+
+  /** Renderiza linha de transferência externa (Pix, ATM, etc) */
+  externalTransferRow(t) {
+    const fromAcc = State.accounts.find(a => a.id === t.account_id);
+    const fromChip = fromAcc
+      ? `<span class="owner-tag ${fromAcc.owner}">${escapeHtml(fromAcc.name)}</span>`
+      : '<span class="text-tertiary">?</span>';
+
+    return `
+      <div class="tx-row" data-edit-tx="${t.id}">
+        <div class="tx-icon">👤</div>
+        <div class="tx-info">
+          <div class="tx-meta" style="font-size:0.875rem;color:var(--text-primary);font-weight:500;margin-bottom:3px;">
+            ${fromChip}
+            <span style="color:var(--text-tertiary);">→</span>
+            <span style="color:var(--text-primary);">${escapeHtml(t.external_to)}</span>
+          </div>
+          <div class="tx-meta">
+            <span class="transfer-badge" style="background:rgba(251,191,36,0.15);color:var(--warning);">↗ External transfer</span>
+            <span>·</span>
+            <span>by ${this.ownerShort(t.owner)}</span>
+          </div>
+        </div>
+        <div class="tx-amount expense">-${App.formatCurrency(t.amount)}</div>
       </div>
     `;
   },
@@ -4303,7 +4350,7 @@ function openTransferForm(transferGroupId = null) {
       date: out.date,
       owner: out.owner,
       destType: inn ? 'account' : 'external',
-      externalName: inn ? '' : (out.description || '').replace(/^Transfer to /, ''),
+      externalName: inn ? '' : (out.external_to || (out.description || '').replace(/^Transfer to /, '')),
     };
   }
 
@@ -4503,7 +4550,7 @@ function openTransferForm(transferGroupId = null) {
           toast('Transfer saved');
         }
       } else {
-        // External transfer = expense with transfer_group_id marker but only ONE row
+        // External transfer = expense flagged with external_to
         const desc = description || `Transfer to ${externalName}`;
         if (isEdit) {
           // Delete existing pair (could be internal that became external) and recreate
@@ -4513,18 +4560,20 @@ function openTransferForm(transferGroupId = null) {
             account_id: selectedFrom, card_id: null,
             category_id: null, owner,
             is_transfer: false, transfer_group_id: null,
+            external_to: externalName,
             installments_total: 1, installment_number: 1,
             created_by: Auth.getSession()?.userId,
           };
           await Data.createTransaction(row);
           toast('Transfer updated');
         } else {
-          // Just create one expense (counts as real expense)
+          // Just create one expense flagged as external transfer
           const row = {
             type: 'expense', amount, date, description: desc,
             account_id: selectedFrom, card_id: null,
             category_id: null, owner,
             is_transfer: false, transfer_group_id: null,
+            external_to: externalName,
             installments_total: 1, installment_number: 1,
             created_by: Auth.getSession()?.userId,
           };
@@ -5162,7 +5211,7 @@ const Dashboard = {
     const ym = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
     // Transfers and card payments are NOT real income/expense — exclude them
     const monthTxs = State.transactions.filter(t =>
-      (t.date || '').startsWith(ym) && !t.is_transfer && !t.is_payment
+      (t.date || '').startsWith(ym) && !t.is_transfer && !t.external_to && !t.is_payment
     );
 
     let income = 0, expense = 0;
