@@ -4877,7 +4877,9 @@ const Cards = {
       // Fatura aberta = próxima a vencer (já fechou ou vai fechar)
       const todayStr = new Date().toISOString().split('T')[0];
       const currentInvoice = Invoice.computeMonthString(todayStr, card);
-      const total = Invoice.getInvoiceTotal(card.id, currentInvoice);
+      const charged = Invoice.getInvoiceTotal(card.id, currentInvoice);
+      const paid = Invoice.getInvoicePaid(card.id, currentInvoice);
+      const total = Math.max(0, charged - paid);
       const txCount = Invoice.getInvoiceTransactions(card.id, currentInvoice).length;
 
       const closingDate = Invoice.nextClosingDate(card);
