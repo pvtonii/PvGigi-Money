@@ -3980,27 +3980,32 @@ function openTransferForm(transferGroupId = null) {
     const pair = State.transactions.filter(t => t.transfer_group_id === transferGroupId);
     const out = pair.find(t => t.type === 'expense');
     const inn = pair.find(t => t.type === 'income');
-    if (!out || !inn) {
+    if (!out) {
       toast('Transfer not found', 'error');
       return;
     }
+    // If no income pair → it's an external transfer (just an expense)
     existing = {
       amount: out.amount,
       fromAccountId: out.account_id,
-      toAccountId: inn.account_id,
+      toAccountId: inn ? inn.account_id : null,
       description: out.description || '',
       date: out.date,
       owner: out.owner,
+      destType: inn ? 'account' : 'external',
+      externalName: inn ? '' : (out.description || '').replace(/^Transfer to /, ''),
     };
   }
 
   const t = existing || {
     amount: '',
     fromAccountId: State.accounts[0]?.id || null,
-    toAccountId: State.accounts[1]?.id || null,
+    toAccountId: State.accounts.find(a => a.id !== State.accounts[0]?.id)?.id || null,
     description: '',
     date: today,
     owner: Auth.getSession()?.userId || 'shared',
+    destType: 'account',
+    externalName: '',
   };
 
   Modal.open(isEdit ? 'Edit transfer' : 'New transfer', `
@@ -4017,10 +4022,17 @@ function openTransferForm(transferGroupId = null) {
     <!-- Arrow visual -->
     <div style="text-align:center; color: var(--text-tertiary); font-size: 1.25rem; margin: var(--space-3) 0;">↓</div>
 
-    <!-- To -->
+    <!-- To toggle (Account vs External) -->
     <div class="form-field">
       <label class="form-label">To</label>
-      <div class="picker-grid" id="tr-to-picker"></div>
+      <div class="payment-source-toggle" id="tr-dest-toggle">
+        <button type="button" data-dest="account" class="${t.destType === 'account' ? 'active' : ''}">🏦 My account</button>
+        <button type="button" data-dest="external" class="${t.destType === 'external' ? 'active' : ''}">👤 Someone else</button>
+      </div>
+      <div class="picker-grid" id="tr-to-picker" ${t.destType === 'external' ? 'style="display:none;"' : ''}></div>
+      <input class="form-input" id="tr-external-name" placeholder="e.g. John (Pix), ATM withdrawal"
+             value="${escapeHtml(t.externalName || '')}"
+             style="${t.destType === 'external' ? 'margin-top:var(--space-2);' : 'display:none;'}">
     </div>
 
     <!-- More options -->
@@ -4053,6 +4065,31 @@ function openTransferForm(transferGroupId = null) {
 
   let selectedFrom = t.fromAccountId;
   let selectedTo = t.toAccountId;
+  let destType = t.destType || 'account';
+
+  // Default active state for dest toggle when no t.destType was set
+  setTimeout(() => {
+    const dToggle = document.getElementById('tr-dest-toggle');
+    if (dToggle && !dToggle.querySelector('button.active')) {
+      const def = dToggle.querySelector(`[data-dest="${destType}"]`);
+      if (def) def.classList.add('active');
+    }
+  }, 0);
+
+  // Toggle Account vs External
+  const destToggle = document.getElementById('tr-dest-toggle');
+  destToggle.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      destToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      destType = btn.dataset.dest;
+      document.getElementById('tr-to-picker').style.display = destType === 'account' ? '' : 'none';
+      document.getElementById('tr-external-name').style.display = destType === 'external' ? '' : 'none';
+      if (destType === 'external') {
+        document.getElementById('tr-external-name').style.marginTop = 'var(--space-2)';
+      }
+    });
+  });
 
   // More options auto-expand on edit if has note or non-default date
   const moreToggle = document.getElementById('tr-more-toggle');
@@ -4072,12 +4109,14 @@ function openTransferForm(transferGroupId = null) {
 
     grid.innerHTML = State.accounts.map(a => {
       const disabled = a.id === otherSelectedId;
+      const ownerLabel = a.owner === 'pv' ? 'PV' : a.owner === 'gigi' ? 'Gigi' : 'Shared';
       return `
         <div class="picker-item ${a.id === selectedId ? 'selected' : ''}"
              data-acc-id="${a.id}"
              style="${disabled ? 'opacity:0.3; pointer-events:none;' : ''}">
           <div class="picker-emoji">${typeIcons[a.type] || '🏦'}</div>
           <div class="picker-label">${escapeHtml(a.name)}</div>
+          <div style="margin-top:4px;"><span class="owner-tag ${a.owner}">${ownerLabel}</span></div>
         </div>
       `;
     }).join('');
@@ -4112,31 +4151,65 @@ function openTransferForm(transferGroupId = null) {
     const description = document.getElementById('tr-description').value.trim();
     const date = document.getElementById('tr-date').value;
     const owner = getSelectedOwner();
+    const externalName = document.getElementById('tr-external-name').value.trim();
 
     if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
     if (!selectedFrom) return toast('Please select source account', 'error');
-    if (!selectedTo) return toast('Please select destination account', 'error');
-    if (selectedFrom === selectedTo) return toast('From and To must be different', 'error');
     if (!date) return toast('Please select a date', 'error');
+
+    if (destType === 'account') {
+      if (!selectedTo) return toast('Please select destination account', 'error');
+      if (selectedFrom === selectedTo) return toast('From and To must be different', 'error');
+    } else {
+      if (!externalName) return toast('Please enter who you are sending to', 'error');
+    }
 
     btn.disabled = true;
     btn.innerHTML = '<span class="loading"></span>';
 
     try {
-      const payload = {
-        amount,
-        fromAccountId: selectedFrom,
-        toAccountId: selectedTo,
-        description,
-        date,
-        owner,
-      };
-      if (isEdit) {
-        await Data.updateTransfer(transferGroupId, payload);
-        toast('Transfer updated');
+      if (destType === 'account') {
+        // Internal transfer (existing logic)
+        const payload = {
+          amount, fromAccountId: selectedFrom, toAccountId: selectedTo,
+          description, date, owner,
+        };
+        if (isEdit) {
+          await Data.updateTransfer(transferGroupId, payload);
+          toast('Transfer updated');
+        } else {
+          await Data.createTransfer(payload);
+          toast('Transfer saved');
+        }
       } else {
-        await Data.createTransfer(payload);
-        toast('Transfer saved');
+        // External transfer = expense with transfer_group_id marker but only ONE row
+        const desc = description || `Transfer to ${externalName}`;
+        if (isEdit) {
+          // Delete existing pair (could be internal that became external) and recreate
+          await Data.deleteTransfer(transferGroupId);
+          const row = {
+            type: 'expense', amount, date, description: desc,
+            account_id: selectedFrom, card_id: null,
+            category_id: null, owner,
+            is_transfer: false, transfer_group_id: null,
+            installments_total: 1, installment_number: 1,
+            created_by: Auth.getSession()?.userId,
+          };
+          await Data.createTransaction(row);
+          toast('Transfer updated');
+        } else {
+          // Just create one expense (counts as real expense)
+          const row = {
+            type: 'expense', amount, date, description: desc,
+            account_id: selectedFrom, card_id: null,
+            category_id: null, owner,
+            is_transfer: false, transfer_group_id: null,
+            installments_total: 1, installment_number: 1,
+            created_by: Auth.getSession()?.userId,
+          };
+          await Data.createTransaction(row);
+          toast('External transfer saved');
+        }
       }
       Modal.close();
       Transactions.render();
@@ -4569,8 +4642,8 @@ document.querySelectorAll('[data-fab-action]').forEach(btn => {
     if (action === 'transaction') {
       openTransactionForm();
     } else if (action === 'transfer') {
-      if (State.accounts.length < 2) {
-        return toast('You need at least 2 accounts to transfer', 'error');
+      if (State.accounts.length < 1) {
+        return toast('You need at least one account', 'error');
       }
       openTransferForm();
     }
