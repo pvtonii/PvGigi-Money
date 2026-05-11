@@ -3397,18 +3397,34 @@ const Transactions = {
     );
     const toAcc = pair ? State.accounts.find(a => a.id === pair.account_id) : null;
 
-    const title = t.description || `${fromAcc?.name || '?'} → ${toAcc?.name || '?'}`;
+    // Build From and To chips with owner colors
+    const fromChip = fromAcc
+      ? `<span class="owner-tag ${fromAcc.owner}">${escapeHtml(fromAcc.name)}</span>`
+      : '<span class="text-tertiary">?</span>';
+    const toChip = toAcc
+      ? `<span class="owner-tag ${toAcc.owner}">${escapeHtml(toAcc.name)}</span>`
+      : '<span class="text-tertiary">?</span>';
+
+    // Optional description as subtitle
+    const noteLine = t.description
+      ? `<div class="tx-title" style="font-size:0.8125rem;color:var(--text-secondary);margin-top:2px;font-weight:400;">${escapeHtml(t.description)}</div>`
+      : '';
 
     return `
       <div class="tx-row" data-edit-transfer="${t.transfer_group_id}">
         <div class="tx-icon">↔️</div>
         <div class="tx-info">
-          <div class="tx-title">${escapeHtml(title)}</div>
+          <div class="tx-meta" style="font-size:0.875rem;color:var(--text-primary);font-weight:500;margin-bottom:3px;">
+            ${fromChip}
+            <span style="color:var(--text-tertiary);">→</span>
+            ${toChip}
+          </div>
           <div class="tx-meta">
             <span class="transfer-badge">↔ Transfer</span>
             <span>·</span>
-            <span class="owner-tag ${t.owner}">${this.ownerShort(t.owner)}</span>
+            <span>by ${this.ownerShort(t.owner)}</span>
           </div>
+          ${noteLine}
         </div>
         <div class="tx-amount transfer">${App.formatCurrency(t.amount)}</div>
       </div>
