@@ -1804,6 +1804,9 @@ html { scroll-behavior: smooth; }
         </div>
       </div>
 
+      <!-- Upcoming recurrences (this month) -->
+      <div id="dash-upcoming"></div>
+
       <!-- Cartões resumo -->
       <div class="fade-in" id="dash-cards-summary"></div>
     </section>
@@ -1814,6 +1817,7 @@ html { scroll-behavior: smooth; }
         <button class="tab active" data-tab="categories">Categories</button>
         <button class="tab" data-tab="accounts">Accounts</button>
         <button class="tab" data-tab="cards-config">Cards</button>
+        <button class="tab" data-tab="recurring">Recurring</button>
         <button class="tab" data-tab="connection">Connection</button>
       </div>
 
@@ -1857,6 +1861,26 @@ html { scroll-behavior: smooth; }
           </button>
         </div>
         <div class="item-list" id="list-cards-config"></div>
+      </div>
+
+      <div class="tab-content hidden" id="tab-recurring">
+        <div class="section-header">
+          <span class="section-title">Subscriptions</span>
+          <button class="section-add" data-add="subscription" data-type="expense">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-linecap="round"/></svg>
+            New
+          </button>
+        </div>
+        <div class="item-list" id="list-subscriptions"></div>
+
+        <div class="section-header">
+          <span class="section-title">Recurring income</span>
+          <button class="section-add" data-add="subscription" data-type="income">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-linecap="round"/></svg>
+            New
+          </button>
+        </div>
+        <div class="item-list" id="list-recurring-income"></div>
       </div>
 
       <div class="tab-content hidden" id="tab-connection">
@@ -2114,6 +2138,7 @@ const State = {
   accounts: [],
   cards: [],
   transactions: [],
+  subscriptions: [],
 };
 
 /* ============================================
@@ -2170,20 +2195,23 @@ const Data = {
     if (!db) return;
     Status.set('syncing', 'Loading data…');
     try {
-      const [cats, accs, crds, txs] = await Promise.all([
+      const [cats, accs, crds, txs, subs] = await Promise.all([
         db.from('categories').select('*').order('name'),
         db.from('accounts').select('*').order('name'),
         db.from('cards').select('*').order('name'),
         db.from('transactions').select('*').order('date', { ascending: false }),
+        db.from('subscriptions').select('*').order('billing_day'),
       ]);
       if (cats.error) throw cats.error;
       if (accs.error) throw accs.error;
       if (crds.error) throw crds.error;
       if (txs.error) throw txs.error;
+      if (subs.error) throw subs.error;
       State.categories = cats.data || [];
       State.accounts = accs.data || [];
       State.cards = crds.data || [];
       State.transactions = txs.data || [];
+      State.subscriptions = subs.data || [];
       Status.set('connected', `${State.transactions.length} transactions · ${State.cards.length} cards`);
     } catch (e) {
       console.error(e);
@@ -2278,6 +2306,35 @@ const Data = {
     const { error } = await db.from('cards').delete().eq('id', id);
     if (error) { Status.set('disconnected', 'Delete failed'); throw error; }
     State.cards = State.cards.filter(c => c.id !== id);
+    this._setReady();
+  },
+
+  // Subscriptions / Recurring
+  async createSubscription(data) {
+    if (!db) throw new Error('Supabase not configured');
+    Status.set('syncing', 'Saving…');
+    const { data: row, error } = await db.from('subscriptions').insert([data]).select().single();
+    if (error) { Status.set('disconnected', 'Save failed'); throw error; }
+    State.subscriptions.push(row);
+    this._setReady();
+    return row;
+  },
+  async updateSubscription(id, data) {
+    if (!db) throw new Error('Supabase not configured');
+    Status.set('syncing', 'Updating…');
+    const { data: row, error } = await db.from('subscriptions').update(data).eq('id', id).select().single();
+    if (error) { Status.set('disconnected', 'Update failed'); throw error; }
+    const idx = State.subscriptions.findIndex(s => s.id === id);
+    if (idx >= 0) State.subscriptions[idx] = row;
+    this._setReady();
+    return row;
+  },
+  async deleteSubscription(id) {
+    if (!db) throw new Error('Supabase not configured');
+    Status.set('syncing', 'Deleting…');
+    const { error } = await db.from('subscriptions').delete().eq('id', id);
+    if (error) { Status.set('disconnected', 'Delete failed'); throw error; }
+    State.subscriptions = State.subscriptions.filter(s => s.id !== id);
     this._setReady();
   },
 
@@ -2847,6 +2904,7 @@ const Settings = {
     this.renderCategories();
     this.renderAccounts();
     this.renderCards();
+    this.renderRecurring();
     this.renderConnection();
   },
 
@@ -2885,6 +2943,43 @@ const Settings = {
     const list = State.cards;
     document.getElementById('list-cards-config').innerHTML =
       list.length ? list.map(c => this.cardConfigRow(c)).join('') : this.emptyMsg('No cards yet. Add your first!');
+  },
+
+  renderRecurring() {
+    const expenses = State.subscriptions.filter(s => s.type === 'expense');
+    const incomes = State.subscriptions.filter(s => s.type === 'income');
+
+    document.getElementById('list-subscriptions').innerHTML =
+      expenses.length ? expenses.map(s => this.subscriptionRow(s)).join('') : this.emptyMsg('No subscriptions yet');
+    document.getElementById('list-recurring-income').innerHTML =
+      incomes.length ? incomes.map(s => this.subscriptionRow(s)).join('') : this.emptyMsg('No recurring income yet');
+  },
+
+  subscriptionRow(s) {
+    const isCard = !!s.card_id;
+    const source = isCard
+      ? State.cards.find(c => c.id === s.card_id)
+      : State.accounts.find(a => a.id === s.account_id);
+    const sourceLabel = source ? (isCard ? '💳 ' : '🏦 ') + source.name : '— no source';
+    const icon = s.type === 'income' ? '💰' : '🔁';
+    const inactive = !s.is_active ? ' style="opacity:0.5;"' : '';
+
+    return `
+      <div class="item-row" data-edit-subscription="${s.id}"${inactive}>
+        <div class="item-icon">${icon}</div>
+        <div class="item-info">
+          <div class="item-name">${escapeHtml(s.name)}</div>
+          <div class="item-meta">
+            <span class="owner-tag ${s.owner}">${this.ownerLabel(s.owner)}</span>
+            <span>·</span>
+            <span>Day ${s.billing_day}</span>
+            <span>·</span>
+            <span>${escapeHtml(sourceLabel)}</span>
+          </div>
+        </div>
+        <div class="item-amount ${s.type === 'income' ? 'text-success' : ''}">${s.type === 'income' ? '+' : ''}${App.formatCurrency(s.amount)}</div>
+      </div>
+    `;
   },
 
   cardConfigRow(c) {
@@ -3255,6 +3350,188 @@ function openCardForm(card = null) {
         toast('Card deleted');
         Modal.close();
         Settings.renderCards();
+      } catch (err) {
+        toast('Error: ' + err.message, 'error');
+      }
+    });
+  }
+}
+
+/* ============================================
+   SUBSCRIPTION FORM — recurring expense or income
+   ============================================ */
+function openSubscriptionForm(subscription = null, defaultType = 'expense') {
+  const isEdit = !!subscription;
+  const s = subscription || {
+    name: '', amount: '', billing_day: 1, type: defaultType,
+    account_id: null, card_id: null, owner: 'shared', is_active: true,
+  };
+
+  // Pre-select source: prefer card if set, else first account or null
+  let selectedSource = s.card_id ? 'card' : 'account';
+  let selectedAccountId = s.account_id;
+  let selectedCardId = s.card_id;
+  let selectedType = s.type;
+
+  // For income, only account source makes sense (you don't get paid via credit card)
+  if (selectedType === 'income') selectedSource = 'account';
+
+  const accountOptions = State.accounts.map(a =>
+    `<option value="${a.id}" ${a.id === selectedAccountId ? 'selected' : ''}>${escapeHtml(a.name)}</option>`
+  ).join('');
+
+  const cardOptions = State.cards.map(c =>
+    `<option value="${c.id}" ${c.id === selectedCardId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+  ).join('');
+
+  const title = isEdit
+    ? (selectedType === 'income' ? 'Edit recurring income' : 'Edit subscription')
+    : (defaultType === 'income' ? 'New recurring income' : 'New subscription');
+
+  Modal.open(title, `
+    <input class="amount-input" id="sub-amount" type="text" inputmode="decimal" placeholder="$0.00"
+           value="${s.amount ? formatAmountInput(s.amount) : ''}" autocomplete="off">
+
+    <div class="form-field">
+      <label class="form-label">Name</label>
+      <input class="form-input" id="sub-name" value="${escapeHtml(s.name)}" placeholder="${selectedType === 'income' ? 'e.g. Salary' : 'e.g. Netflix'}">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">Billing day</label>
+      <input class="form-input" id="sub-day" type="number" min="1" max="31" value="${s.billing_day}">
+      <div class="form-help">Day of the month it gets charged / received</div>
+    </div>
+
+    ${selectedType === 'expense' ? `
+      <div class="form-field" id="sub-source-block">
+        <label class="form-label">Paid with</label>
+        <div class="payment-source-toggle" id="sub-source-toggle">
+          <button type="button" data-source="account" class="${selectedSource === 'account' ? 'active' : ''}">🏦 Account</button>
+          <button type="button" data-source="card" class="${selectedSource === 'card' ? 'active' : ''}">💳 Card</button>
+        </div>
+        <select class="form-select" id="sub-account" style="margin-top:var(--space-2); ${selectedSource === 'account' ? '' : 'display:none;'}">
+          <option value="">— select account —</option>
+          ${accountOptions}
+        </select>
+        <select class="form-select" id="sub-card" style="margin-top:var(--space-2); ${selectedSource === 'card' ? '' : 'display:none;'}">
+          <option value="">— select card —</option>
+          ${cardOptions}
+        </select>
+      </div>
+    ` : `
+      <div class="form-field">
+        <label class="form-label">Deposited into</label>
+        <select class="form-select" id="sub-account">
+          <option value="">— select account —</option>
+          ${accountOptions}
+        </select>
+      </div>
+    `}
+
+    <div class="form-field">
+      <label class="form-label">Who</label>
+      ${ownerToggleHtml(s.owner)}
+    </div>
+
+    ${isEdit ? `
+      <div class="form-field">
+        <label class="form-label" style="display:flex;align-items:center;gap:var(--space-2);">
+          <input type="checkbox" id="sub-active" ${s.is_active ? 'checked' : ''} style="width:auto;">
+          Active
+        </label>
+        <div class="form-help">Inactive recurrences won't show on dashboard</div>
+      </div>
+    ` : ''}
+
+    <div class="flex gap-3" style="margin-top: var(--space-5);">
+      ${isEdit ? `<button class="btn btn-danger" id="sub-delete">Delete</button>` : ''}
+      <button class="btn btn-primary" id="sub-save">${isEdit ? 'Save' : 'Create'}</button>
+    </div>
+  `);
+
+  bindOwnerToggle();
+
+  // Source toggle (expense only)
+  const sourceToggle = document.getElementById('sub-source-toggle');
+  if (sourceToggle) {
+    sourceToggle.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        sourceToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedSource = btn.dataset.source;
+        const acctSel = document.getElementById('sub-account');
+        const cardSel = document.getElementById('sub-card');
+        if (acctSel) acctSel.style.display = selectedSource === 'account' ? '' : 'none';
+        if (cardSel) cardSel.style.display = selectedSource === 'card' ? '' : 'none';
+      });
+    });
+  }
+
+  setTimeout(() => document.getElementById('sub-amount').focus(), 300);
+
+  // Save
+  document.getElementById('sub-save').addEventListener('click', async () => {
+    const btn = document.getElementById('sub-save');
+    const amountStr = document.getElementById('sub-amount').value.replace(/[^0-9.,]/g, '').replace(',', '.');
+    const amount = parseFloat(amountStr);
+    const name = document.getElementById('sub-name').value.trim();
+    const billing_day = parseInt(document.getElementById('sub-day').value, 10);
+    const owner = getSelectedOwner();
+    const activeEl = document.getElementById('sub-active');
+    const is_active = activeEl ? activeEl.checked : true;
+
+    if (!name) return toast('Please enter a name', 'error');
+    if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
+    if (!billing_day || billing_day < 1 || billing_day > 31) return toast('Invalid billing day', 'error');
+
+    let account_id = null, card_id = null;
+    if (selectedType === 'income') {
+      account_id = document.getElementById('sub-account').value || null;
+      if (!account_id) return toast('Please select an account', 'error');
+    } else if (selectedSource === 'account') {
+      account_id = document.getElementById('sub-account').value || null;
+      if (!account_id) return toast('Please select an account', 'error');
+    } else {
+      card_id = document.getElementById('sub-card').value || null;
+      if (!card_id) return toast('Please select a card', 'error');
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span>';
+
+    try {
+      const data = {
+        name, amount, billing_day, type: selectedType,
+        account_id, card_id, owner, is_active,
+        created_by: Auth.getSession()?.userId,
+      };
+      if (isEdit) {
+        await Data.updateSubscription(subscription.id, data);
+        toast('Updated');
+      } else {
+        await Data.createSubscription(data);
+        toast('Created');
+      }
+      Modal.close();
+      Settings.renderRecurring();
+      Dashboard.render();
+    } catch (err) {
+      toast('Error: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = isEdit ? 'Save' : 'Create';
+    }
+  });
+
+  if (isEdit) {
+    document.getElementById('sub-delete').addEventListener('click', async () => {
+      if (!confirm(`Delete "${s.name}"?`)) return;
+      try {
+        await Data.deleteSubscription(subscription.id);
+        toast('Deleted');
+        Modal.close();
+        Settings.renderRecurring();
+        Dashboard.render();
       } catch (err) {
         toast('Error: ' + err.message, 'error');
       }
@@ -4440,6 +4717,56 @@ function openPayStatementForm(cardId, invoiceMonth) {
   });
 }
 
+/**
+ * Confirm a recurrence — creates a real transaction and marks the
+ * subscription as confirmed for this month.
+ */
+async function confirmRecurrence(subscriptionId) {
+  const s = State.subscriptions.find(x => x.id === subscriptionId);
+  if (!s) return toast('Recurrence not found', 'error');
+
+  // Date: billing_day of current month
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  // Clamp billing_day to month's last day
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const day = Math.min(Number(s.billing_day) || 1, lastDay);
+  const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+
+  try {
+    // Create the transaction
+    const txData = {
+      type: s.type,
+      amount: Number(s.amount) || 0,
+      date,
+      description: s.name,
+      account_id: s.account_id || null,
+      card_id: s.card_id || null,
+      category_id: null,
+      owner: s.owner,
+      installments_total: 1,
+      installment_number: 1,
+      created_by: Auth.getSession()?.userId,
+    };
+    if (s.card_id) {
+      const card = State.cards.find(c => c.id === s.card_id);
+      if (card) txData.invoice_month = Invoice.computeMonthString(date, card);
+    }
+    await Data.createTransaction(txData);
+
+    // Mark subscription as confirmed for this month
+    await Data.updateSubscription(s.id, { last_confirmed_month: monthKey });
+
+    toast(`${s.name} confirmed ✓`);
+    Dashboard.render();
+    Transactions.render();
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  }
+}
+
 /* ============================================
    CARDS PAGE — Lista de cartões + visualização de fatura
    ============================================ */
@@ -4667,7 +4994,18 @@ const Dashboard = {
   render() {
     const today = this.calcTodayBalance();
     const dueThisMonth = Invoice.getTotalDueThisMonth();
-    const projected = today - dueThisMonth;
+
+    // Recurrences not yet confirmed this month
+    const pendingRec = this.calcRecurrencesPending();
+
+    // End of month projection:
+    //   Today balance
+    //   - card statements due this month (already counted in dueThisMonth)
+    //   - pending account-based subscriptions (they'll hit the account directly)
+    //   + pending recurring income (will be deposited)
+    //   (card-based subscriptions are already inside future invoices, don't double-count)
+    const projected = today - dueThisMonth - pendingRec.accountExpense + pendingRec.income;
+
     const monthStats = this.calcMonthStats();
     const byOwner = this.calcByOwner();
 
@@ -4695,8 +5033,93 @@ const Dashboard = {
     document.getElementById('dash-pv-balance').textContent = App.formatCurrency(byOwner.pv);
     document.getElementById('dash-gigi-balance').textContent = App.formatCurrency(byOwner.gigi);
 
+    // Upcoming recurrences
+    this.renderUpcoming(pendingRec.items);
+
     // Cartões com barrinhas
     this.renderCardsSummary();
+  },
+
+  /** Returns pending (not yet confirmed) recurrences for the current month */
+  calcRecurrencesPending() {
+    const today = new Date();
+    const ym = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
+
+    const items = [];
+    let accountExpense = 0;
+    let income = 0;
+
+    State.subscriptions.forEach(s => {
+      if (!s.is_active) return;
+      // Skip if already confirmed for this month
+      if (s.last_confirmed_month && s.last_confirmed_month.startsWith(ym.substring(0, 7))) return;
+
+      items.push(s);
+
+      const amount = Number(s.amount) || 0;
+      if (s.type === 'income') {
+        income += amount;
+      } else if (s.account_id) {
+        // expense paid via account → impacts end-of-month balance directly
+        accountExpense += amount;
+      }
+      // expense paid via card → already counted inside future invoice, skip
+    });
+
+    // Sort by billing day
+    items.sort((a, b) => (a.billing_day || 0) - (b.billing_day || 0));
+
+    return { items, accountExpense, income };
+  },
+
+  renderUpcoming(items) {
+    const container = document.getElementById('dash-upcoming');
+    if (!container) return;
+
+    if (!items.length) {
+      container.innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="card mb-4 fade-in" style="margin-top: var(--space-4);">
+        <div class="card-title">Upcoming this month · ${items.length}</div>
+        <div style="margin-top: var(--space-3);">
+          ${items.map(s => this.upcomingRow(s)).join('')}
+        </div>
+      </div>
+    `;
+
+    // Bind confirm buttons
+    container.querySelectorAll('[data-confirm-rec]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        confirmRecurrence(btn.dataset.confirmRec);
+      });
+    });
+  },
+
+  upcomingRow(s) {
+    const isIncome = s.type === 'income';
+    const isCard = !!s.card_id;
+    const source = isCard
+      ? State.cards.find(c => c.id === s.card_id)
+      : State.accounts.find(a => a.id === s.account_id);
+    const sourceLabel = source ? (isCard ? '💳 ' : '🏦 ') + source.name : '— no source';
+    const icon = isIncome ? '💰' : '🔁';
+    const sign = isIncome ? '+' : '-';
+    const amountClass = isIncome ? 'text-success' : 'text-danger';
+
+    return `
+      <div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) 0;border-bottom:1px solid var(--border-subtle);">
+        <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);border-radius:50%;flex-shrink:0;">${icon}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.875rem;font-weight:500;">${escapeHtml(s.name)}</div>
+          <div style="font-size:0.75rem;color:var(--text-tertiary);">Day ${s.billing_day} · ${escapeHtml(sourceLabel)}</div>
+        </div>
+        <div class="text-mono ${amountClass}" style="font-weight:500;font-size:0.875rem;">${sign}${App.formatCurrency(s.amount)}</div>
+        <button class="btn btn-secondary" data-confirm-rec="${s.id}" style="padding:6px 12px;font-size:0.75rem;">✓ Confirm</button>
+      </div>
+    `;
   },
 
   /** Saldo total HOJE = saldo das contas (cartões não afetam saldo da conta) */
@@ -4878,6 +5301,7 @@ document.addEventListener('click', (e) => {
     if (what === 'category') openCategoryForm(null, addBtn.dataset.type || 'expense');
     if (what === 'account') openAccountForm(null);
     if (what === 'card') openCardForm(null);
+    if (what === 'subscription') openSubscriptionForm(null, addBtn.dataset.type || 'expense');
     return;
   }
 
@@ -4902,6 +5326,14 @@ document.addEventListener('click', (e) => {
     const id = editCard.dataset.editCard;
     const c = State.cards.find(x => x.id === id);
     if (c) openCardForm(c);
+    return;
+  }
+
+  const editSub = e.target.closest('[data-edit-subscription]');
+  if (editSub) {
+    const id = editSub.dataset.editSubscription;
+    const s = State.subscriptions.find(x => x.id === id);
+    if (s) openSubscriptionForm(s);
     return;
   }
 
