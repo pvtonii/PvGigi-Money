@@ -2574,36 +2574,61 @@ const Invoice = {
    * Pra parcelado em 12x de $100, isso retorna $1200 inicialmente,
    * e cai $100 a cada mês conforme as parcelas "passam".
    */
+  /**
+   * Crédito utilizado = soma do valor de cada fatura aberta (mês atual ou futuro)
+   * MENOS o que já foi pago daquela fatura via "Pay statement".
+   *
+   * Exemplo: cartão fechou em 31/maio, fatura de junho (vencimento 5/jun) = $5k.
+   * Em 6/jun você paga $5k. A partir daí, o crédito usado dessa fatura zera.
+   */
   getCreditUsed(cardId) {
     const today = new Date();
     const currentMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
 
-    let total = 0;
+    // Group purchases by invoice_month
+    const byInvoice = {};
     State.transactions.forEach(t => {
       if (t.card_id !== cardId) return;
       if (!t.invoice_month) return;
-      if (t.invoice_month >= currentMonth) {
-        total += Number(t.amount) || 0;
-      }
+      if (t.invoice_month < currentMonth) return; // past invoices don't reserve credit
+      byInvoice[t.invoice_month] = (byInvoice[t.invoice_month] || 0) + (Number(t.amount) || 0);
     });
+
+    // Subtract payments per invoice
+    let total = 0;
+    Object.keys(byInvoice).forEach(invoiceMonth => {
+      const charged = byInvoice[invoiceMonth];
+      const paid = this.getInvoicePaid(cardId, invoiceMonth);
+      const remaining = Math.max(0, charged - paid);
+      total += remaining;
+    });
+
     return total;
   },
 
-  /** Total a pagar este mês = soma de faturas de TODOS os cartões cujo invoice_month seja o mês atual */
+  /** Total a pagar este mês = soma de faturas de TODOS os cartões cujo invoice_month seja o mês atual, descontando pagamentos */
   getTotalDueThisMonth() {
     const today = new Date();
     const currentMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
 
-    return State.transactions
-      .filter(t => t.card_id && t.invoice_month === currentMonth)
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    let total = 0;
+    State.cards.forEach(card => {
+      const charged = State.transactions
+        .filter(t => t.card_id === card.id && t.invoice_month === currentMonth)
+        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const paid = this.getInvoicePaid(card.id, currentMonth);
+      total += Math.max(0, charged - paid);
+    });
+    return total;
   },
 
-  /** Total a pagar de um cartão específico no mês atual */
+  /** Total a pagar de um cartão específico no mês atual (descontando pagamentos) */
   getCardDueThisMonth(cardId) {
     const today = new Date();
     const currentMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
-    return this.getInvoiceTotal(cardId, currentMonth);
+    const charged = this.getInvoiceTotal(cardId, currentMonth);
+    const paid = this.getInvoicePaid(cardId, currentMonth);
+    return Math.max(0, charged - paid);
   },
 
   /** Total already paid for a given invoice (sum of all payment transactions) */
@@ -3836,6 +3861,12 @@ function openTransactionForm(transaction = null) {
     <input class="amount-input" id="tx-amount" type="text" inputmode="decimal" placeholder="$0.00"
            value="${t.amount ? formatAmountInput(t.amount) : ''}" autocomplete="off">
 
+    <!-- Descrição (em cima pra você sempre saber onde gastou) -->
+    <div class="form-field">
+      <label class="form-label">Description</label>
+      <input class="form-input" id="tx-description" value="${escapeHtml(t.description || '')}" placeholder="e.g. Coffee at Starbucks">
+    </div>
+
     <!-- Categoria -->
     <div class="form-field">
       <label class="form-label">Category</label>
@@ -3871,10 +3902,6 @@ function openTransactionForm(transaction = null) {
       <svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
     <div class="more-options-content" id="tx-more-content">
-      <div class="form-field">
-        <label class="form-label">Description</label>
-        <input class="form-input" id="tx-description" value="${escapeHtml(t.description || '')}" placeholder="e.g. Coffee">
-      </div>
       <div class="form-field">
         <label class="form-label">Date</label>
         <input class="form-input" id="tx-date" type="date" value="${t.date}">
