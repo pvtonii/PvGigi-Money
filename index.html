@@ -1630,6 +1630,103 @@ h1, h2, h3 {
   font-size: 0.75rem;
 }
 
+/* ===== UPCOMING THIS MONTH ===== */
+.upcoming-card {
+  margin-top: var(--space-4);
+}
+.upcoming-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+.upcoming-title {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.upcoming-count {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  padding: 2px 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+.upcoming-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.upcoming-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.upcoming-row:first-child {
+  padding-top: 0;
+}
+.upcoming-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  border-radius: 50%;
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+.upcoming-info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.upcoming-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.upcoming-meta {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.upcoming-amount {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  text-align: right;
+}
+.upcoming-confirm {
+  flex-shrink: 0;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all var(--duration);
+  white-space: nowrap;
+}
+.upcoming-confirm:hover {
+  background: var(--success);
+  color: white;
+  border-color: var(--success);
+}
+
 /* Toast com ação (clicável) */
 .toast.with-action {
   cursor: pointer;
@@ -5160,11 +5257,12 @@ const Dashboard = {
     }
 
     container.innerHTML = `
-      <div class="card mb-4 fade-in" style="margin-top: var(--space-4);">
-        <div class="card-title">Upcoming this month · ${items.length}</div>
-        <div style="margin-top: var(--space-3);">
-          ${items.map(s => this.upcomingRow(s)).join('')}
+      <div class="card upcoming-card fade-in">
+        <div class="upcoming-header">
+          <span class="upcoming-title">Upcoming this month</span>
+          <span class="upcoming-count">${items.length}</span>
         </div>
+        ${items.map(s => this.upcomingRow(s)).join('')}
       </div>
     `;
 
@@ -5188,14 +5286,14 @@ const Dashboard = {
     const amountClass = isIncome ? 'text-success' : 'text-danger';
 
     return `
-      <div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) 0;border-bottom:1px solid var(--border-subtle);">
-        <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);border-radius:50%;flex-shrink:0;">${icon}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:0.875rem;font-weight:500;">${escapeHtml(s.name)}</div>
-          <div style="font-size:0.75rem;color:var(--text-tertiary);">Day ${s.billing_day} · ${escapeHtml(sourceLabel)}</div>
+      <div class="upcoming-row">
+        <div class="upcoming-icon">${icon}</div>
+        <div class="upcoming-info">
+          <div class="upcoming-name">${escapeHtml(s.name)}</div>
+          <div class="upcoming-meta">Day ${s.billing_day} · ${escapeHtml(sourceLabel)}</div>
         </div>
-        <div class="text-mono ${amountClass}" style="font-weight:500;font-size:0.875rem;">${sign}${App.formatCurrency(s.amount)}</div>
-        <button class="btn btn-secondary" data-confirm-rec="${s.id}" style="padding:6px 12px;font-size:0.75rem;">✓ Confirm</button>
+        <div class="upcoming-amount ${amountClass}">${sign}${App.formatCurrency(s.amount)}</div>
+        <button class="upcoming-confirm" data-confirm-rec="${s.id}">✓ Confirm</button>
       </div>
     `;
   },
