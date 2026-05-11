@@ -4088,6 +4088,8 @@ function openTransferForm(transferGroupId = null) {
       if (destType === 'external') {
         document.getElementById('tr-external-name').style.marginTop = 'var(--space-2)';
       }
+      // Re-render From picker (different disable rules in each mode)
+      rerenderPickers();
     });
   });
 
@@ -4130,7 +4132,10 @@ function openTransferForm(transferGroupId = null) {
   }
 
   function rerenderPickers() {
-    renderAccountPicker('tr-from-picker', selectedFrom, selectedTo, (id) => {
+    // When destType is 'external', the From picker shouldn't disable any account
+    // (there's no internal "To" to conflict with)
+    const fromOther = destType === 'external' ? null : selectedTo;
+    renderAccountPicker('tr-from-picker', selectedFrom, fromOther, (id) => {
       selectedFrom = id;
       rerenderPickers();
     });
