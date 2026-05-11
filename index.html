@@ -2548,6 +2548,23 @@ const Invoice = {
     return this.getInvoiceTotal(cardId, currentMonth);
   },
 
+  /** Total already paid for a given invoice (sum of all payment transactions) */
+  getInvoicePaid(cardId, invoiceMonth) {
+    return State.transactions
+      .filter(t => t.is_payment && t.paid_card_id === cardId && t.paid_invoice_month === invoiceMonth)
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  },
+
+  /** Returns 'paid' | 'partial' | 'open' for an invoice */
+  getInvoiceStatus(cardId, invoiceMonth) {
+    const total = this.getInvoiceTotal(cardId, invoiceMonth);
+    const paid = this.getInvoicePaid(cardId, invoiceMonth);
+    if (total <= 0) return 'open';
+    if (paid >= total - 0.005) return 'paid';
+    if (paid > 0) return 'partial';
+    return 'open';
+  },
+
   /**
    * Verifica se uma compra está em "zona ambígua":
    * dentro de 3 dias antes ou depois do fechamento do cartão.
@@ -3270,8 +3287,8 @@ const Transactions = {
     // Mês atual (do mais recente das transações filtradas, ou hoje)
     const today = new Date();
     const ym = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-    // Exclude transfers from income/expense totals (they're not real movement)
-    const monthTxs = txs.filter(t => (t.date || '').startsWith(ym) && !t.is_transfer);
+    // Exclude transfers and card payments from income/expense totals (not real movement)
+    const monthTxs = txs.filter(t => (t.date || '').startsWith(ym) && !t.is_transfer && !t.is_payment);
 
     let income = 0, expense = 0;
     monthTxs.forEach(t => {
@@ -4268,6 +4285,10 @@ function openTransferForm(transferGroupId = null) {
  * Move uma transação de cartão pra outra fatura (invoice_month).
  * Usado no fluxo de "zona ambígua" ou edição manual.
  */
+/**
+ * Move uma transação de cartão pra outra fatura (invoice_month).
+ * Usado no fluxo de "zona ambígua" ou edição manual.
+ */
 async function moveTransactionToInvoice(transactionId, newInvoiceMonth) {
   try {
     await Data.updateTransaction(transactionId, { invoice_month: newInvoiceMonth });
@@ -4278,6 +4299,145 @@ async function moveTransactionToInvoice(transactionId, newInvoiceMonth) {
   } catch (err) {
     toast('Error: ' + err.message, 'error');
   }
+}
+
+/**
+ * Pay statement — open a form pre-filled to register a payment
+ * for a given card statement.
+ */
+function openPayStatementForm(cardId, invoiceMonth) {
+  const card = State.cards.find(c => c.id === cardId);
+  if (!card) return toast('Card not found', 'error');
+
+  const total = Invoice.getInvoiceTotal(cardId, invoiceMonth);
+  const alreadyPaid = Invoice.getInvoicePaid(cardId, invoiceMonth);
+  const remaining = Math.max(0, total - alreadyPaid);
+  const today = new Date().toISOString().split('T')[0];
+
+  // Default account = card's linked account, or first account
+  const defaultAccountId = card.account_id || State.accounts[0]?.id;
+
+  if (!State.accounts.length) {
+    return toast('You need at least one account to pay a statement', 'error');
+  }
+
+  Modal.open(`Pay statement · ${card.name}`, `
+    <div style="margin-bottom:var(--space-4); padding:var(--space-3) var(--space-4); background:var(--bg-secondary); border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+      <div style="font-size:0.75rem; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;">Statement total · ${Invoice.formatMonth(invoiceMonth)}</div>
+      <div style="font-family:var(--font-display); font-size:1.25rem; font-weight:500; font-variant-numeric:tabular-nums;">${App.formatCurrency(total)}</div>
+      ${alreadyPaid > 0 ? `<div style="font-size:0.75rem; color:var(--warning); margin-top:4px;">Already paid: ${App.formatCurrency(alreadyPaid)}</div>` : ''}
+    </div>
+
+    <!-- Amount (editable) -->
+    <input class="amount-input" id="pay-amount" type="text" inputmode="decimal" placeholder="$0.00"
+           value="${remaining.toFixed(2)}" autocomplete="off">
+
+    <!-- Account picker -->
+    <div class="form-field">
+      <label class="form-label">Pay from</label>
+      <div class="picker-grid" id="pay-account-picker"></div>
+    </div>
+
+    <!-- More options -->
+    <button type="button" class="more-options-toggle" id="pay-more-toggle">
+      <span>More options</span>
+      <svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="more-options-content" id="pay-more-content">
+      <div class="form-field">
+        <label class="form-label">Date</label>
+        <input class="form-input" id="pay-date" type="date" value="${today}">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Note</label>
+        <input class="form-input" id="pay-note" placeholder="Optional">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Paid by</label>
+        ${ownerToggleHtml(Auth.getSession()?.userId || 'shared')}
+      </div>
+    </div>
+
+    <div style="margin-top: var(--space-5);">
+      <button class="btn btn-primary" id="pay-save">Confirm payment</button>
+    </div>
+  `);
+
+  bindOwnerToggle();
+
+  let selectedAccountId = defaultAccountId;
+
+  // More options toggle
+  const moreToggle = document.getElementById('pay-more-toggle');
+  const moreContent = document.getElementById('pay-more-content');
+  moreToggle.addEventListener('click', () => {
+    moreToggle.classList.toggle('expanded');
+    moreContent.classList.toggle('expanded');
+  });
+
+  // Render account picker with owner badges
+  function renderPicker() {
+    const grid = document.getElementById('pay-account-picker');
+    const typeIcons = { checking: '🏦', savings: '💰', cash: '💵', investment: '📈' };
+    grid.innerHTML = State.accounts.map(a => {
+      const ownerLabel = a.owner === 'pv' ? 'PV' : a.owner === 'gigi' ? 'Gigi' : 'Shared';
+      return `
+        <div class="picker-item ${a.id === selectedAccountId ? 'selected' : ''}" data-acc-id="${a.id}">
+          <div class="picker-emoji">${typeIcons[a.type] || '🏦'}</div>
+          <div class="picker-label">${escapeHtml(a.name)}</div>
+          <div style="margin-top:4px;"><span class="owner-tag ${a.owner}">${ownerLabel}</span></div>
+        </div>
+      `;
+    }).join('');
+    grid.querySelectorAll('.picker-item').forEach(el => {
+      el.addEventListener('click', () => {
+        selectedAccountId = el.dataset.accId;
+        renderPicker();
+      });
+    });
+  }
+  renderPicker();
+
+  setTimeout(() => document.getElementById('pay-amount').focus(), 300);
+
+  // Save
+  document.getElementById('pay-save').addEventListener('click', async () => {
+    const btn = document.getElementById('pay-save');
+    const amountStr = document.getElementById('pay-amount').value.replace(/[^0-9.,]/g, '').replace(',', '.');
+    const amount = parseFloat(amountStr);
+    const date = document.getElementById('pay-date').value;
+    const note = document.getElementById('pay-note').value.trim();
+    const owner = getSelectedOwner();
+
+    if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
+    if (!selectedAccountId) return toast('Please select an account', 'error');
+    if (!date) return toast('Please select a date', 'error');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span>';
+
+    try {
+      const desc = note || `Payment: ${card.name} · ${Invoice.formatMonth(invoiceMonth)}`;
+      await Data.createTransaction({
+        type: 'expense', amount, date, description: desc,
+        account_id: selectedAccountId, card_id: null,
+        category_id: null, owner,
+        is_transfer: false, is_payment: true,
+        paid_card_id: cardId, paid_invoice_month: invoiceMonth,
+        installments_total: 1, installment_number: 1,
+        created_by: Auth.getSession()?.userId,
+      });
+      toast('Payment recorded ✓');
+      Modal.close();
+      Transactions.render();
+      Dashboard.render();
+      if (document.getElementById('page-cards').classList.contains('active')) Cards.render();
+    } catch (err) {
+      toast('Error: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Confirm payment';
+    }
+  });
 }
 
 /* ============================================
@@ -4403,7 +4563,24 @@ const Cards = {
         <div class="invoice-summary-amount">${App.formatCurrency(total)}</div>
         <div class="invoice-summary-detail">
           <span><strong>${txCount}</strong> ${txCount === 1 ? "entry" : "entries"}</span>
+          ${(() => {
+            const status = Invoice.getInvoiceStatus(card.id, this.selectedInvoiceMonth);
+            const paid = Invoice.getInvoicePaid(card.id, this.selectedInvoiceMonth);
+            if (status === 'paid') {
+              return `<span>·</span><span style="color:var(--success);font-weight:500;">✓ Paid</span>`;
+            } else if (status === 'partial') {
+              return `<span>·</span><span style="color:var(--warning);font-weight:500;">Partial · ${App.formatCurrency(paid)} paid</span>`;
+            } else if (total > 0) {
+              return `<span>·</span><span style="color:var(--text-tertiary);">Unpaid</span>`;
+            }
+            return '';
+          })()}
         </div>
+        ${total > 0 && Invoice.getInvoiceStatus(card.id, this.selectedInvoiceMonth) !== 'paid' ? `
+          <button class="btn btn-primary" id="pay-statement-btn" style="margin-top: var(--space-3);">
+            Pay statement
+          </button>
+        ` : ''}
       </div>
 
       ${txs.length === 0 ? `
@@ -4458,6 +4635,13 @@ const Cards = {
         this.render();
       });
     });
+
+    const payBtn = document.getElementById('pay-statement-btn');
+    if (payBtn) {
+      payBtn.addEventListener('click', () => {
+        openPayStatementForm(this.selectedCardId, this.selectedInvoiceMonth);
+      });
+    }
   },
 
   ownerLabel(o) {
@@ -4553,9 +4737,9 @@ const Dashboard = {
   calcMonthStats() {
     const today = new Date();
     const ym = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-    // Transfers are NOT real income/expense — exclude them
+    // Transfers and card payments are NOT real income/expense — exclude them
     const monthTxs = State.transactions.filter(t =>
-      (t.date || '').startsWith(ym) && !t.is_transfer
+      (t.date || '').startsWith(ym) && !t.is_transfer && !t.is_payment
     );
 
     let income = 0, expense = 0;
