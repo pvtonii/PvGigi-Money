@@ -4132,14 +4132,20 @@ function openTransferForm(transferGroupId = null) {
   }
 
   function rerenderPickers() {
-    // When destType is 'external', the From picker shouldn't disable any account
-    // (there's no internal "To" to conflict with)
-    const fromOther = destType === 'external' ? null : selectedTo;
-    renderAccountPicker('tr-from-picker', selectedFrom, fromOther, (id) => {
+    // From picker: no disable in external mode, no disable ever (we swap instead)
+    renderAccountPicker('tr-from-picker', selectedFrom, null, (id) => {
+      // If user clicks the same account that is currently "To", swap them
+      if (id === selectedTo && destType === 'account') {
+        selectedTo = selectedFrom;
+      }
       selectedFrom = id;
       rerenderPickers();
     });
-    renderAccountPicker('tr-to-picker', selectedTo, selectedFrom, (id) => {
+    renderAccountPicker('tr-to-picker', selectedTo, null, (id) => {
+      // If user clicks the same account that is currently "From", swap them
+      if (id === selectedFrom) {
+        selectedFrom = selectedTo;
+      }
       selectedTo = id;
       rerenderPickers();
     });
