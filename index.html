@@ -583,6 +583,26 @@ h1, h2, h3 {
   color: var(--text-secondary);
 }
 
+/* Income/Expense type badge */
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.type-badge.income {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+}
+.type-badge.expense {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
+
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -3443,7 +3463,15 @@ function openCardForm(card = null) {
     <div class="flex gap-3" style="margin-bottom: var(--space-4);">
       <div class="form-field" style="flex:1;margin-bottom:0;">
         <label class="form-label">Brand</label>
-        <input class="form-input" id="card-brand" value="${escapeHtml(c.brand || '')}" placeholder="Visa, Master...">
+        <select class="form-select" id="card-brand">
+          <option value="">— select —</option>
+          <option value="Visa" ${c.brand === 'Visa' ? 'selected' : ''}>Visa</option>
+          <option value="Mastercard" ${c.brand === 'Mastercard' ? 'selected' : ''}>Mastercard</option>
+          <option value="American Express" ${c.brand === 'American Express' ? 'selected' : ''}>American Express</option>
+          <option value="Discover" ${c.brand === 'Discover' ? 'selected' : ''}>Discover</option>
+          <option value="Apple Card" ${c.brand === 'Apple Card' ? 'selected' : ''}>Apple Card</option>
+          <option value="Other" ${c.brand === 'Other' ? 'selected' : ''}>Other</option>
+        </select>
       </div>
       <div class="form-field" style="flex:1;margin-bottom:0;">
         <label class="form-label">Last 4 digits</label>
@@ -3861,6 +3889,9 @@ const Transactions = {
     const installmentBadge = t.installments_total > 1
       ? `<span class="card-badge installments">${t.installment_number}/${t.installments_total}</span>`
       : '';
+    const typeBadge = t.type === 'income'
+      ? '<span class="type-badge income">↑ Income</span>'
+      : '<span class="type-badge expense">↓ Expense</span>';
 
     return `
       <div class="tx-row" data-edit-tx="${t.id}">
@@ -3868,6 +3899,8 @@ const Transactions = {
         <div class="tx-info">
           <div class="tx-title">${escapeHtml(title)}</div>
           <div class="tx-meta">
+            ${typeBadge}
+            <span>·</span>
             <span>${sourceIcon}${escapeHtml(sourceLabel)}</span>
             ${installmentBadge ? `<span>·</span>${installmentBadge}` : ''}
             <span>·</span>
