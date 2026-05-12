@@ -1499,6 +1499,35 @@ h1, h2, h3 {
   word-break: break-all;
   line-height: 1.1;
 }
+.dash-hero-split {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.dash-hero-split-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+.dash-hero-split-label {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.dash-hero-split-value {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .dash-card {
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
@@ -1663,7 +1692,7 @@ h1, h2, h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 .upcoming-title {
   font-size: 0.6875rem;
@@ -1681,6 +1710,9 @@ h1, h2, h3 {
   font-weight: 500;
 }
 .upcoming-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-3) 0;
   border-bottom: 1px solid var(--border-subtle);
 }
@@ -1691,15 +1723,9 @@ h1, h2, h3 {
 .upcoming-row:first-child {
   padding-top: 0;
 }
-.upcoming-row-top {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-2);
-}
 .upcoming-icon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1708,12 +1734,23 @@ h1, h2, h3 {
   flex-shrink: 0;
   font-size: 1rem;
 }
-.upcoming-name {
+.upcoming-info {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+}
+.upcoming-name {
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.upcoming-meta {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1724,32 +1761,16 @@ h1, h2, h3 {
   font-size: 0.9375rem;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
-  white-space: nowrap;
-}
-.upcoming-row-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding-left: calc(32px + var(--space-3));
-}
-.upcoming-meta {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: right;
 }
 .upcoming-confirm {
   flex-shrink: 0;
   background: var(--bg-tertiary);
   color: var(--text-primary);
   border: 1px solid var(--border-default);
-  padding: 5px 10px;
+  padding: 6px 10px;
   border-radius: var(--radius-md);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   transition: all var(--duration);
   white-space: nowrap;
@@ -1871,6 +1892,12 @@ html { scroll-behavior: smooth; }
       <h1 class="text-display" id="header-title">Finance</h1>
     </div>
     <div class="flex items-center gap-2">
+      <button class="theme-toggle" id="refresh-btn" aria-label="Refresh app" title="Refresh">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M21 12a9 9 0 11-3-6.7L21 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M21 3v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
         <svg id="theme-icon" viewBox="0 0 24 24" fill="none"></svg>
       </button>
@@ -1886,7 +1913,18 @@ html { scroll-behavior: smooth; }
       <div class="dash-hero fade-in" id="dash-today">
         <div class="dash-card-label">Today's balance</div>
         <div class="dash-hero-value text-mono" id="dash-today-value">$0.00</div>
-        <div class="dash-card-sub" id="dash-today-sub">account balance</div>
+        <div class="dash-hero-split">
+          <div class="dash-hero-split-item">
+            <div class="user-avatar pv" style="width:18px;height:18px;font-size:0.5625rem;">P</div>
+            <span class="dash-hero-split-label">PV</span>
+            <span class="dash-hero-split-value text-mono" id="dash-pv-balance">$0.00</span>
+          </div>
+          <div class="dash-hero-split-item">
+            <div class="user-avatar gigi" style="width:18px;height:18px;font-size:0.5625rem;">G</div>
+            <span class="dash-hero-split-label">Gigi</span>
+            <span class="dash-hero-split-value text-mono" id="dash-gigi-balance">$0.00</span>
+          </div>
+        </div>
       </div>
 
       <!-- Due this month + End of month (lado a lado) -->
@@ -1915,24 +1953,6 @@ html { scroll-behavior: smooth; }
             <div class="card-title" style="margin-bottom:4px;">Expenses</div>
             <div class="text-mono text-danger" id="dash-expense" style="font-size:1.125rem;font-weight:500;">-$0.00</div>
           </div>
-        </div>
-      </div>
-
-      <!-- Saldo PV / Gigi -->
-      <div class="flex gap-3 mb-5 fade-in">
-        <div class="card" style="flex:1;padding:var(--space-4);">
-          <div class="flex items-center gap-2 mb-3">
-            <div class="user-avatar pv" style="width:20px;height:20px;font-size:0.625rem;">P</div>
-            <span style="font-size:0.8125rem;font-weight:500;">PV</span>
-          </div>
-          <div class="text-mono text-display" id="dash-pv-balance" style="font-size:1.25rem;font-weight:500;">$0.00</div>
-        </div>
-        <div class="card" style="flex:1;padding:var(--space-4);">
-          <div class="flex items-center gap-2 mb-3">
-            <div class="user-avatar gigi" style="width:20px;height:20px;font-size:0.625rem;">G</div>
-            <span style="font-size:0.8125rem;font-weight:500;">Gigi</span>
-          </div>
-          <div class="text-mono text-display" id="dash-gigi-balance" style="font-size:1.25rem;font-weight:500;">$0.00</div>
         </div>
       </div>
 
@@ -5322,15 +5342,13 @@ const Dashboard = {
 
     return `
       <div class="upcoming-row">
-        <div class="upcoming-row-top">
-          <div class="upcoming-icon">${icon}</div>
+        <div class="upcoming-icon">${icon}</div>
+        <div class="upcoming-info">
           <div class="upcoming-name">${escapeHtml(s.name)}</div>
-          <div class="upcoming-amount ${amountClass}">${sign}${App.formatCurrency(s.amount)}</div>
-        </div>
-        <div class="upcoming-row-bottom">
           <div class="upcoming-meta">Day ${s.billing_day} · ${escapeHtml(sourceLabel)}</div>
-          <button class="upcoming-confirm" data-confirm-rec="${s.id}">✓ Confirm</button>
         </div>
+        <div class="upcoming-amount ${amountClass}">${sign}${App.formatCurrency(s.amount)}</div>
+        <button class="upcoming-confirm" data-confirm-rec="${s.id}">✓ Confirm</button>
       </div>
     `;
   },
@@ -5400,8 +5418,31 @@ const Dashboard = {
       const available = Math.max(0, limit - used);
       const dueNow = Invoice.getCardDueThisMonth(card.id);
 
+      // Open statement = next invoice being formed (charged - paid)
+      const todayStr = new Date().toISOString().split('T')[0];
+      const nextInvoiceMonth = Invoice.computeMonthString(todayStr, card);
+      const nextCharged = Invoice.getInvoiceTotal(card.id, nextInvoiceMonth);
+      const nextPaid = Invoice.getInvoicePaid(card.id, nextInvoiceMonth);
+      const openStatement = Math.max(0, nextCharged - nextPaid);
+      // Avoid double-showing if next month is the current invoice (same period)
+      const showOpen = openStatement > 0 && nextInvoiceMonth !== (() => {
+        const t = new Date();
+        return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-01';
+      })();
+
       const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
       const colorClass = pct < 60 ? 'low' : pct < 85 ? 'medium' : 'high';
+
+      let metaText;
+      if (dueNow > 0 && showOpen) {
+        metaText = `due this month · ${App.formatCurrency(openStatement)} next`;
+      } else if (dueNow > 0) {
+        metaText = 'due this month';
+      } else if (showOpen) {
+        metaText = `no bill this month · ${App.formatCurrency(openStatement)} forming`;
+      } else {
+        metaText = 'no bill this month';
+      }
 
       return `
         <div class="dash-card-summary" data-open-card="${card.id}">
@@ -5410,7 +5451,7 @@ const Dashboard = {
             <div class="dash-card-summary-amount">${App.formatCurrency(dueNow)}</div>
           </div>
           <div class="dash-card-summary-meta">
-            ${dueNow > 0 ? 'due this month' : 'no bill this month'}
+            ${metaText}
           </div>
           <div class="credit-bar-container">
             <div class="credit-bar-track">
@@ -5438,6 +5479,19 @@ const Dashboard = {
    EVENTS
    ============================================ */
 document.getElementById('theme-toggle').addEventListener('click', () => App.toggleTheme());
+
+// Refresh button — forces reload bypassing cache
+document.getElementById('refresh-btn').addEventListener('click', () => {
+  const btn = document.getElementById('refresh-btn');
+  btn.style.transform = 'rotate(360deg)';
+  btn.style.transition = 'transform 500ms ease';
+  // Append timestamp query param to bust cache, then reload
+  setTimeout(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('t', Date.now());
+    window.location.href = url.toString();
+  }, 300);
+});
 
 const badge = document.getElementById('user-badge');
 let pressTimer;
