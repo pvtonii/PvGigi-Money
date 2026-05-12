@@ -5379,7 +5379,8 @@ const Dashboard = {
       });
       if (a.owner === 'pv') balances.pv += balance;
       else if (a.owner === 'gigi') balances.gigi += balance;
-      else if (a.owner === 'shared') {
+      else {
+        // 'shared' OR any unknown owner: split 50/50 so total always matches Today's balance
         balances.pv += balance / 2;
         balances.gigi += balance / 2;
       }
