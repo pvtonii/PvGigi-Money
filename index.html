@@ -603,6 +603,27 @@ h1, h2, h3 {
   color: var(--danger);
 }
 
+/* Show all sources button (U3 escape) */
+.show-all-btn {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  background: transparent;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration);
+}
+.show-all-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-style: solid;
+}
+
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -3458,7 +3479,7 @@ function openCardForm(card = null) {
   Modal.open(isEdit ? 'Edit card' : 'New card', `
     <div class="form-field">
       <label class="form-label">Card name</label>
-      <input class="form-input" id="card-name" value="${escapeHtml(c.name)}" placeholder="e.g. Master Card">
+      <input class="form-input" id="card-name" value="${escapeHtml(c.name)}" placeholder="e.g. Apple Card">
     </div>
     <div class="flex gap-3" style="margin-bottom: var(--space-4);">
       <div class="form-field" style="flex:1;margin-bottom:0;">
@@ -3469,6 +3490,7 @@ function openCardForm(card = null) {
           <option value="Mastercard" ${c.brand === 'Mastercard' ? 'selected' : ''}>Mastercard</option>
           <option value="American Express" ${c.brand === 'American Express' ? 'selected' : ''}>American Express</option>
           <option value="Discover" ${c.brand === 'Discover' ? 'selected' : ''}>Discover</option>
+          <option value="Apple Card" ${c.brand === 'Apple Card' ? 'selected' : ''}>Apple Card</option>
           <option value="Other" ${c.brand === 'Other' ? 'selected' : ''}>Other</option>
         </select>
       </div>
@@ -4117,6 +4139,7 @@ function openTransactionForm(transaction = null) {
   let selectedCardId = t.card_id;
   let selectedSource = initialSource; // 'account' | 'card'
   let installments = t.installments_total || 1;
+  let showAllSources = false; // U3: when true, ignores owner filter on Pay with
 
   bindOwnerToggle();
 
@@ -4306,46 +4329,90 @@ function openTransactionForm(transaction = null) {
 
   function renderSourcePicker() {
     const grid = document.getElementById('tx-source-picker');
+    const currentUserId = Auth.getSession()?.userId; // 'pv' or 'gigi'
+
+    // Filter accounts/cards: show only mine + shared, unless "Show all" is on
+    // OR unless the currently-selected one is from another owner (edit case)
+    const filterByOwner = (items, selectedId) => {
+      if (showAllSources) return items;
+      const selected = items.find(i => i.id === selectedId);
+      const selectedNeedsAllShown = selected && selected.owner !== currentUserId && selected.owner !== 'shared';
+      if (selectedNeedsAllShown) return items;
+      return items.filter(i => i.owner === currentUserId || i.owner === 'shared');
+    };
 
     if (selectedSource === 'account') {
       const typeIcons = { checking: '🏦', savings: '💰', cash: '💵', investment: '📈' };
-      if (!State.accounts.length) {
+      const visible = filterByOwner(State.accounts, selectedAccountId);
+      const totalCount = State.accounts.length;
+      const hiddenCount = totalCount - visible.length;
+
+      if (!totalCount) {
         grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No accounts. Add one in Settings.</div>`;
         return;
       }
-      grid.innerHTML = State.accounts.map(a => `
-        <div class="picker-item ${a.id === selectedAccountId ? 'selected' : ''}" data-acc-id="${a.id}">
-          <div class="picker-emoji">${typeIcons[a.type] || '🏦'}</div>
-          <div class="picker-label">${escapeHtml(a.name)}</div>
-        </div>
-      `).join('');
-      grid.querySelectorAll('.picker-item').forEach(el => {
-        el.addEventListener('click', () => {
-          selectedAccountId = el.dataset.accId;
-          grid.querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
-          el.classList.add('selected');
+      if (!visible.length) {
+        grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No accounts for ${currentUserId === 'pv' ? 'PV' : 'Gigi'}.</div>`;
+      } else {
+        grid.innerHTML = visible.map(a => `
+          <div class="picker-item ${a.id === selectedAccountId ? 'selected' : ''}" data-acc-id="${a.id}">
+            <div class="picker-emoji">${typeIcons[a.type] || '🏦'}</div>
+            <div class="picker-label">${escapeHtml(a.name)}</div>
+          </div>
+        `).join('');
+        grid.querySelectorAll('.picker-item').forEach(el => {
+          el.addEventListener('click', () => {
+            selectedAccountId = el.dataset.accId;
+            grid.querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
+            el.classList.add('selected');
+          });
         });
-      });
+      }
+
+      // Show all toggle
+      if (hiddenCount > 0 && !showAllSources) {
+        grid.insertAdjacentHTML('afterend', `<button type="button" class="show-all-btn" id="tx-show-all">Show all accounts (${hiddenCount} hidden)</button>`);
+        document.getElementById('tx-show-all').addEventListener('click', () => {
+          showAllSources = true;
+          renderSourcePicker();
+        });
+      }
     } else {
       // Cards
-      if (!State.cards.length) {
+      const visible = filterByOwner(State.cards, selectedCardId);
+      const totalCount = State.cards.length;
+      const hiddenCount = totalCount - visible.length;
+
+      if (!totalCount) {
         grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No cards. Add one in Settings.</div>`;
         return;
       }
-      grid.innerHTML = State.cards.map(card => `
-        <div class="picker-item ${card.id === selectedCardId ? 'selected' : ''}" data-card-id="${card.id}">
-          <div class="picker-emoji">💳</div>
-          <div class="picker-label">${escapeHtml(card.name)}</div>
-        </div>
-      `).join('');
-      grid.querySelectorAll('.picker-item').forEach(el => {
-        el.addEventListener('click', () => {
-          selectedCardId = el.dataset.cardId;
-          grid.querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
-          el.classList.add('selected');
-          updateAmbiguousWarning();
+      if (!visible.length) {
+        grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No cards for ${currentUserId === 'pv' ? 'PV' : 'Gigi'}.</div>`;
+      } else {
+        grid.innerHTML = visible.map(card => `
+          <div class="picker-item ${card.id === selectedCardId ? 'selected' : ''}" data-card-id="${card.id}">
+            <div class="picker-emoji">💳</div>
+            <div class="picker-label">${escapeHtml(card.name)}</div>
+          </div>
+        `).join('');
+        grid.querySelectorAll('.picker-item').forEach(el => {
+          el.addEventListener('click', () => {
+            selectedCardId = el.dataset.cardId;
+            grid.querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
+            el.classList.add('selected');
+            updateAmbiguousWarning();
+          });
         });
-      });
+      }
+
+      if (hiddenCount > 0 && !showAllSources) {
+        grid.insertAdjacentHTML('afterend', `<button type="button" class="show-all-btn" id="tx-show-all">Show all cards (${hiddenCount} hidden)</button>`);
+        document.getElementById('tx-show-all').addEventListener('click', () => {
+          showAllSources = true;
+          renderSourcePicker();
+        });
+      }
     }
   }
 
