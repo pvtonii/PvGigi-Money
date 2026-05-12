@@ -3458,7 +3458,7 @@ function openCardForm(card = null) {
   Modal.open(isEdit ? 'Edit card' : 'New card', `
     <div class="form-field">
       <label class="form-label">Card name</label>
-      <input class="form-input" id="card-name" value="${escapeHtml(c.name)}" placeholder="e.g. Apple Card">
+      <input class="form-input" id="card-name" value="${escapeHtml(c.name)}" placeholder="e.g. Master Card">
     </div>
     <div class="flex gap-3" style="margin-bottom: var(--space-4);">
       <div class="form-field" style="flex:1;margin-bottom:0;">
@@ -3469,7 +3469,6 @@ function openCardForm(card = null) {
           <option value="Mastercard" ${c.brand === 'Mastercard' ? 'selected' : ''}>Mastercard</option>
           <option value="American Express" ${c.brand === 'American Express' ? 'selected' : ''}>American Express</option>
           <option value="Discover" ${c.brand === 'Discover' ? 'selected' : ''}>Discover</option>
-          <option value="Apple Card" ${c.brand === 'Apple Card' ? 'selected' : ''}>Apple Card</option>
           <option value="Other" ${c.brand === 'Other' ? 'selected' : ''}>Other</option>
         </select>
       </div>
