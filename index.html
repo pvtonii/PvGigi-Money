@@ -320,6 +320,35 @@ h1, h2, h3 {
 .user-avatar.shared { background: var(--shared-color); }
 .user-name { font-size: 0.875rem; font-weight: 500; }
 
+/* Inline avatar — small colored circle with PV/Gigi/Shared initial */
+.inline-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: white;
+  font-weight: 600;
+  flex-shrink: 0;
+  vertical-align: middle;
+  letter-spacing: -0.02em;
+}
+.inline-avatar.pv { background: var(--pv-color); }
+.inline-avatar.gigi { background: var(--gigi-color); }
+.inline-avatar.shared { background: var(--shared-color); }
+
+/* "by X" meta chip */
+.meta-by {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-tertiary);
+}
+.meta-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .theme-toggle {
   width: 36px; height: 36px;
   border-radius: var(--radius-full);
@@ -3917,14 +3946,17 @@ const Transactions = {
     const amountClass = t.type === 'income' ? 'income' : 'expense';
     const icon = cat?.icon || (t.type === 'income' ? '💰' : '💸');
     const title = t.description || cat?.name || 'Uncategorized';
-    const sourceLabel = card?.name || acc?.name || 'Unknown';
-    const sourceIcon = card ? '💳 ' : '';
+    const source = card || acc;
+    const sourceLabel = source?.name || 'Unknown';
+    const sourceIcon = card ? '💳 ' : '🏦 ';
+    const sourceOwnerAvatar = source ? this.ownerAvatar(source.owner) : '';
     const installmentBadge = t.installments_total > 1
       ? `<span class="card-badge installments">${t.installment_number}/${t.installments_total}</span>`
       : '';
     const typeBadge = t.type === 'income'
       ? '<span class="type-badge income">↑ Income</span>'
       : '<span class="type-badge expense">↓ Expense</span>';
+    const byBadge = this.byChip(t);
 
     return `
       <div class="tx-row" data-edit-tx="${t.id}">
@@ -3934,10 +3966,9 @@ const Transactions = {
           <div class="tx-meta">
             ${typeBadge}
             <span>·</span>
-            <span>${sourceIcon}${escapeHtml(sourceLabel)}</span>
+            <span class="meta-source">${sourceIcon}${escapeHtml(sourceLabel)} ${sourceOwnerAvatar}</span>
             ${installmentBadge ? `<span>·</span>${installmentBadge}` : ''}
-            <span>·</span>
-            <span class="owner-tag ${t.owner}">${this.ownerShort(t.owner)}</span>
+            ${byBadge ? `<span>·</span>${byBadge}` : ''}
           </div>
         </div>
         <div class="tx-amount ${amountClass}">${sign}${App.formatCurrency(t.amount)}</div>
@@ -3983,7 +4014,7 @@ const Transactions = {
           <div class="tx-meta">
             <span class="transfer-badge">↔ Transfer</span>
             <span>·</span>
-            <span>by ${this.ownerShort(t.owner)}</span>
+            <span class="meta-by">by ${this.ownerAvatar(t.created_by || t.owner, 12)}</span>
           </div>
           ${noteLine}
         </div>
@@ -4011,7 +4042,7 @@ const Transactions = {
           <div class="tx-meta">
             <span class="transfer-badge" style="background:rgba(251,191,36,0.15);color:var(--warning);">↗ External transfer</span>
             <span>·</span>
-            <span>by ${this.ownerShort(t.owner)}</span>
+            <span class="meta-by">by ${this.ownerAvatar(t.created_by || t.owner, 12)}</span>
           </div>
         </div>
         <div class="tx-amount expense">-${App.formatCurrency(t.amount)}</div>
@@ -4021,6 +4052,23 @@ const Transactions = {
 
   ownerShort(o) {
     return o === 'pv' ? 'PV' : o === 'gigi' ? 'Gigi' : 'Both';
+  },
+
+  /** Returns an inline avatar chip showing the source owner: P/G/S */
+  ownerAvatar(owner, size = 14) {
+    const letter = owner === 'pv' ? 'P' : owner === 'gigi' ? 'G' : 'S';
+    const cls = owner === 'pv' ? 'pv' : owner === 'gigi' ? 'gigi' : 'shared';
+    return `<span class="inline-avatar ${cls}" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.55)}px;">${letter}</span>`;
+  },
+
+  /** Returns "by X" chip only when transaction owner is different from who registered (created_by) */
+  byChip(t) {
+    // No created_by saved (legacy) → don't show, would be misleading
+    if (!t.created_by) return '';
+    // Same as owner and not shared → redundant, hide
+    if (t.created_by === t.owner) return '';
+    // Owner is shared, or owner ≠ created_by → show who registered it
+    return `<span class="meta-by">by ${this.ownerAvatar(t.created_by, 12)}</span>`;
   },
 
   formatDayLabel(dateStr) {
