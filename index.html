@@ -3249,9 +3249,6 @@ const Settings = {
         <div class="item-icon" style="${c.color ? `background:${c.color}22;color:${c.color};` : ''}">${c.icon || '•'}</div>
         <div class="item-info">
           <div class="item-name">${escapeHtml(c.name)}</div>
-          <div class="item-meta">
-            <span class="owner-tag ${c.owner}">${this.ownerLabel(c.owner)}</span>
-          </div>
         </div>
       </div>
     `;
@@ -3406,7 +3403,7 @@ function getSelectedOwner() {
 
 function openCategoryForm(category = null, defaultType = 'expense') {
   const isEdit = !!category;
-  const c = category || { name: '', icon: '', type: defaultType, owner: (Auth.getSession()?.userId || 'pv') };
+  const c = category || { name: '', icon: '', type: defaultType };
 
   Modal.open(isEdit ? 'Edit category' : 'New category', `
     <div class="form-field">
@@ -3424,17 +3421,11 @@ function openCategoryForm(category = null, defaultType = 'expense') {
         <button type="button" data-type="income" class="${c.type === 'income' ? 'active income' : ''}">Income</button>
       </div>
     </div>
-    <div class="form-field">
-      <label class="form-label">Who uses</label>
-      ${ownerToggleHtml(c.owner)}
-    </div>
     <div class="flex gap-3" style="margin-top: var(--space-5);">
       ${isEdit ? `<button class="btn btn-danger" id="cat-delete">Delete</button>` : ''}
       <button class="btn btn-primary" id="cat-save">${isEdit ? 'Save' : 'Create'}</button>
     </div>
   `);
-
-  bindOwnerToggle();
 
   const typeToggle = document.getElementById('type-toggle');
   typeToggle.querySelectorAll('button').forEach(btn => {
@@ -3451,7 +3442,6 @@ function openCategoryForm(category = null, defaultType = 'expense') {
     const name = document.getElementById('cat-name').value.trim();
     const icon = document.getElementById('cat-icon').value.trim();
     const type = document.querySelector('#type-toggle button.active')?.dataset.type || 'expense';
-    const owner = getSelectedOwner();
 
     if (!name) return toast('Please enter a name', 'error');
 
@@ -3459,7 +3449,8 @@ function openCategoryForm(category = null, defaultType = 'expense') {
     btn.innerHTML = '<span class="loading"></span>';
 
     try {
-      const data = { name, icon: icon || null, type, owner, created_by: Auth.getSession()?.userId };
+      // Categories are universal — no owner
+      const data = { name, icon: icon || null, type, owner: null, created_by: Auth.getSession()?.userId };
       if (isEdit) {
         await Data.updateCategory(category.id, data);
         toast('Category updated');
