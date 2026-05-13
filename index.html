@@ -4012,12 +4012,11 @@ const Transactions = {
     const typeBadge = t.type === 'income'
       ? '<span class="type-badge income">↑ Income</span>'
       : '<span class="type-badge expense">↓ Expense</span>';
-    // Owner chip: show when transaction owner differs from source account owner
-    // (so PV gave Gigi the gift even though account is shared, etc.)
-    const ownerChip = (t.owner && source && t.owner !== source.owner)
-      ? `<span class="meta-by">for ${this.ownerAvatar(t.owner, 12)}</span>`
+    // Always show "by X" — author of the transaction (uses created_by, falls back to owner for legacy)
+    const registeredBy = t.created_by || t.owner;
+    const byBadge = registeredBy
+      ? `<span class="meta-by">by ${this.ownerAvatar(registeredBy, 12)}</span>`
       : '';
-    const byBadge = this.byChip(t);
 
     return `
       <div class="tx-row" data-edit-tx="${t.id}">
@@ -4029,7 +4028,6 @@ const Transactions = {
             <span>·</span>
             <span class="meta-source">${escapeHtml(sourceLabel)} ${sourceOwnerAvatar}</span>
             ${installmentBadge ? `<span>·</span>${installmentBadge}` : ''}
-            ${ownerChip ? `<span>·</span>${ownerChip}` : ''}
             ${byBadge ? `<span>·</span>${byBadge}` : ''}
           </div>
         </div>
@@ -4243,11 +4241,6 @@ function openTransactionForm(transaction = null) {
         <label class="form-label">Date</label>
         <input class="form-input" id="tx-date" type="date" value="${t.date}">
       </div>
-      <div class="form-field">
-        <label class="form-label">Owner</label>
-        <div class="form-help" style="margin-top:0;margin-bottom:var(--space-2);">Whose expense/income this is — defaults to who's logged in</div>
-        ${ownerToggleHtml(t.owner)}
-      </div>
     </div>
 
     <!-- Aviso de fatura ambígua + botão mover (preenchido dinamicamente) -->
@@ -4268,8 +4261,6 @@ function openTransactionForm(transaction = null) {
   let selectedSource = initialSource; // 'account' | 'card'
   let installments = t.installments_total || 1;
   let showAllSources = false; // U3: when true, ignores owner filter on Pay with
-
-  bindOwnerToggle();
 
   // Toggle tipo
   const typeToggle = document.getElementById('tx-type');
@@ -4633,7 +4624,8 @@ function openTransactionForm(transaction = null) {
     const amount = parseFloat(amountStr);
     const description = document.getElementById('tx-description').value.trim();
     const date = document.getElementById('tx-date').value;
-    const owner = getSelectedOwner();
+    // Owner is always the logged-in user (preserve when editing existing transaction)
+    const owner = isEdit ? t.owner : (Auth.getSession()?.userId || 'shared');
 
     if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
     if (!date) return toast('Please select a date', 'error');
@@ -4905,11 +4897,6 @@ function openTransferForm(opts = null) {
         <label class="form-label">Date</label>
         <input class="form-input" id="tr-date" type="date" value="${t.date}">
       </div>
-      <div class="form-field">
-        <label class="form-label">Owner</label>
-        <div class="form-help" style="margin-top:0;margin-bottom:var(--space-2);">Whose money is this — defaults to who's logged in</div>
-        ${ownerToggleHtml(t.owner)}
-      </div>
     </div>
 
     <div class="flex gap-3" style="margin-top: var(--space-5);">
@@ -4917,8 +4904,6 @@ function openTransferForm(opts = null) {
       <button class="btn btn-primary" id="tr-save">${isEdit ? 'Save' : 'Transfer'}</button>
     </div>
   `);
-
-  bindOwnerToggle();
 
   let selectedFrom = t.fromAccountId;
   let selectedTo = t.toAccountId;
@@ -5018,7 +5003,8 @@ function openTransferForm(opts = null) {
     const amount = parseFloat(amountStr);
     const description = document.getElementById('tr-description').value.trim();
     const date = document.getElementById('tr-date').value;
-    const owner = getSelectedOwner();
+    // Owner = current user (preserve when editing)
+    const owner = isEdit ? t.owner : (Auth.getSession()?.userId || 'shared');
     const externalName = document.getElementById('tr-external-name').value.trim();
 
     if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
@@ -5178,19 +5164,12 @@ function openPayStatementForm(cardId, invoiceMonth) {
         <label class="form-label">Note</label>
         <input class="form-input" id="pay-note" placeholder="Optional">
       </div>
-      <div class="form-field">
-        <label class="form-label">Owner</label>
-        <div class="form-help" style="margin-top:0;margin-bottom:var(--space-2);">Defaults to who's logged in</div>
-        ${ownerToggleHtml(Auth.getSession()?.userId || 'shared')}
-      </div>
     </div>
 
     <div style="margin-top: var(--space-5);">
       <button class="btn btn-primary" id="pay-save">Confirm payment</button>
     </div>
   `);
-
-  bindOwnerToggle();
 
   let selectedAccountId = defaultAccountId;
 
@@ -5234,7 +5213,8 @@ function openPayStatementForm(cardId, invoiceMonth) {
     const amount = parseFloat(amountStr);
     const date = document.getElementById('pay-date').value;
     const note = document.getElementById('pay-note').value.trim();
-    const owner = getSelectedOwner();
+    // Owner = current user
+    const owner = Auth.getSession()?.userId || 'shared';
 
     if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
     if (!selectedAccountId) return toast('Please select an account', 'error');
