@@ -88,6 +88,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.01em;
   line-height: 1.5;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* When user rotates phone to landscape, app stays portrait-locked visually */
+@media (orientation: landscape) and (max-height: 500px) {
+  body {
+    max-width: 100vh;
+  }
 }
 button, input, select, textarea { font-family: inherit; color: inherit; font-size: 1rem; }
 button { background: none; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -347,6 +356,28 @@ h1, h2, h3 {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+/* Amount block — value + debit/credit label */
+.tx-amount-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.tx-source-type {
+  font-size: 0.625rem;
+  font-weight: 500;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+.tx-source-type.debit {
+  color: var(--text-tertiary);
+}
+.tx-source-type.credit {
+  color: var(--warning);
 }
 
 .theme-toggle {
@@ -1278,6 +1309,17 @@ h1, h2, h3 {
   background: var(--bg-tertiary);
   border-color: var(--text-primary);
 }
+
+/* Colored left border by owner — instant visual recognition */
+.picker-item.owner-pv {
+  border-left: 3px solid var(--pv-color);
+}
+.picker-item.owner-gigi {
+  border-left: 3px solid var(--gigi-color);
+}
+.picker-item.owner-shared {
+  border-left: 3px solid var(--shared-color);
+}
 .picker-emoji { font-size: 1.5rem; }
 .picker-label {
   font-size: 0.6875rem;
@@ -2165,10 +2207,9 @@ html { scroll-behavior: smooth; }
 
     <section class="page" id="page-transactions">
       <div class="tx-filters">
-        <button class="tx-filter active" data-filter="all">All</button>
-        <button class="tx-filter" data-filter="income">Income</button>
-        <button class="tx-filter" data-filter="expense">Expenses</button>
-        <button class="tx-filter" data-filter="transfer">Transfers</button>
+        <button class="tx-filter active cyclic" data-type-filter="all">
+          <span style="font-size:0.6875rem;">All</span>
+        </button>
         <button class="tx-filter" data-owner-filter="all">
           <span style="font-size:0.6875rem;">Anyone</span>
         </button>
@@ -3835,6 +3876,12 @@ const Transactions = {
     } else if (this.filterType === 'expense') {
       // Real expenses only — exclude transfers and card payments
       txs = txs.filter(t => t.type === 'expense' && !this.isTransferTx(t) && !t.is_payment);
+    } else if (this.filterType === 'debit') {
+      // Debit = transactions paid via account (not card)
+      txs = txs.filter(t => t.account_id && !t.card_id && !this.isTransferTx(t));
+    } else if (this.filterType === 'credit') {
+      // Credit = transactions paid via card
+      txs = txs.filter(t => !!t.card_id && !this.isTransferTx(t));
     }
 
     if (this.filterOwner !== 'all') {
@@ -3948,8 +3995,8 @@ const Transactions = {
     const title = t.description || cat?.name || 'Uncategorized';
     const source = card || acc;
     const sourceLabel = source?.name || 'Unknown';
-    const sourceIcon = card ? '💳 ' : '🏦 ';
     const sourceOwnerAvatar = source ? this.ownerAvatar(source.owner) : '';
+    const sourceTypeLabel = card ? 'credit' : 'debit';
     const installmentBadge = t.installments_total > 1
       ? `<span class="card-badge installments">${t.installment_number}/${t.installments_total}</span>`
       : '';
@@ -3966,12 +4013,15 @@ const Transactions = {
           <div class="tx-meta">
             ${typeBadge}
             <span>·</span>
-            <span class="meta-source">${sourceIcon}${escapeHtml(sourceLabel)} ${sourceOwnerAvatar}</span>
+            <span class="meta-source">${escapeHtml(sourceLabel)} ${sourceOwnerAvatar}</span>
             ${installmentBadge ? `<span>·</span>${installmentBadge}` : ''}
             ${byBadge ? `<span>·</span>${byBadge}` : ''}
           </div>
         </div>
-        <div class="tx-amount ${amountClass}">${sign}${App.formatCurrency(t.amount)}</div>
+        <div class="tx-amount-block">
+          <span class="tx-source-type ${sourceTypeLabel}">${sourceTypeLabel}</span>
+          <div class="tx-amount ${amountClass}">${sign}${App.formatCurrency(t.amount)}</div>
+        </div>
       </div>
     `;
   },
@@ -4433,6 +4483,10 @@ function openTransactionForm(transaction = null) {
     const grid = document.getElementById('tx-source-picker');
     const currentUserId = Auth.getSession()?.userId; // 'pv' or 'gigi'
 
+    // Remove any previous "show all" button to avoid duplicates
+    const oldBtn = document.getElementById('tx-show-all');
+    if (oldBtn) oldBtn.remove();
+
     // Filter accounts/cards: show only mine + shared, unless "Show all" is on
     // OR unless the currently-selected one is from another owner (edit case)
     const filterByOwner = (items, selectedId) => {
@@ -4444,10 +4498,13 @@ function openTransactionForm(transaction = null) {
     };
 
     if (selectedSource === 'account') {
-      const typeIcons = { checking: '🏦', savings: '💰', cash: '💵', investment: '📈' };
       const visible = filterByOwner(State.accounts, selectedAccountId);
       const totalCount = State.accounts.length;
-      const hiddenCount = totalCount - visible.length;
+      const hiddenCount = totalCount - (showAllSources
+        ? State.accounts.filter(a => a.owner !== currentUserId && a.owner !== 'shared').length
+        : totalCount - visible.length);
+      // Simpler: how many are NOT mine+shared
+      const notMineCount = State.accounts.filter(a => a.owner !== currentUserId && a.owner !== 'shared').length;
 
       if (!totalCount) {
         grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No accounts. Add one in Settings.</div>`;
@@ -4457,8 +4514,7 @@ function openTransactionForm(transaction = null) {
         grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No accounts for ${currentUserId === 'pv' ? 'PV' : 'Gigi'}.</div>`;
       } else {
         grid.innerHTML = visible.map(a => `
-          <div class="picker-item ${a.id === selectedAccountId ? 'selected' : ''}" data-acc-id="${a.id}">
-            <div class="picker-emoji">${typeIcons[a.type] || '🏦'}</div>
+          <div class="picker-item owner-${a.owner} ${a.id === selectedAccountId ? 'selected' : ''}" data-acc-id="${a.id}">
             <div class="picker-label">${escapeHtml(a.name)}</div>
           </div>
         `).join('');
@@ -4471,11 +4527,14 @@ function openTransactionForm(transaction = null) {
         });
       }
 
-      // Show all toggle
-      if (hiddenCount > 0 && !showAllSources) {
-        grid.insertAdjacentHTML('afterend', `<button type="button" class="show-all-btn" id="tx-show-all">Show all accounts (${hiddenCount} hidden)</button>`);
+      // Show all / Show less toggle (bidirectional)
+      if (notMineCount > 0) {
+        const label = showAllSources
+          ? `Show only mine`
+          : `Show all accounts (${notMineCount} hidden)`;
+        grid.insertAdjacentHTML('afterend', `<button type="button" class="show-all-btn" id="tx-show-all">${label}</button>`);
         document.getElementById('tx-show-all').addEventListener('click', () => {
-          showAllSources = true;
+          showAllSources = !showAllSources;
           renderSourcePicker();
         });
       }
@@ -4483,7 +4542,7 @@ function openTransactionForm(transaction = null) {
       // Cards
       const visible = filterByOwner(State.cards, selectedCardId);
       const totalCount = State.cards.length;
-      const hiddenCount = totalCount - visible.length;
+      const notMineCount = State.cards.filter(c => c.owner !== currentUserId && c.owner !== 'shared').length;
 
       if (!totalCount) {
         grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No cards. Add one in Settings.</div>`;
@@ -4493,8 +4552,7 @@ function openTransactionForm(transaction = null) {
         grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No cards for ${currentUserId === 'pv' ? 'PV' : 'Gigi'}.</div>`;
       } else {
         grid.innerHTML = visible.map(card => `
-          <div class="picker-item ${card.id === selectedCardId ? 'selected' : ''}" data-card-id="${card.id}">
-            <div class="picker-emoji">💳</div>
+          <div class="picker-item owner-${card.owner} ${card.id === selectedCardId ? 'selected' : ''}" data-card-id="${card.id}">
             <div class="picker-label">${escapeHtml(card.name)}</div>
           </div>
         `).join('');
@@ -4508,10 +4566,13 @@ function openTransactionForm(transaction = null) {
         });
       }
 
-      if (hiddenCount > 0 && !showAllSources) {
-        grid.insertAdjacentHTML('afterend', `<button type="button" class="show-all-btn" id="tx-show-all">Show all cards (${hiddenCount} hidden)</button>`);
+      if (notMineCount > 0) {
+        const label = showAllSources
+          ? `Show only mine`
+          : `Show all cards (${notMineCount} hidden)`;
+        grid.insertAdjacentHTML('afterend', `<button type="button" class="show-all-btn" id="tx-show-all">${label}</button>`);
         document.getElementById('tx-show-all').addEventListener('click', () => {
-          showAllSources = true;
+          showAllSources = !showAllSources;
           renderSourcePicker();
         });
       }
@@ -5883,12 +5944,23 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Filtros de tipo (todas/entradas/saídas)
-  const txFilter = e.target.closest('.tx-filter[data-filter]');
-  if (txFilter) {
-    document.querySelectorAll('.tx-filter[data-filter]').forEach(b => b.classList.remove('active'));
-    txFilter.classList.add('active');
-    Transactions.filterType = txFilter.dataset.filter;
+  // Cyclic type filter: all → income → expense → transfer → debit → credit → all
+  const typeFilter = e.target.closest('.tx-filter[data-type-filter]');
+  if (typeFilter) {
+    const cycle = ['all', 'income', 'expense', 'transfer', 'debit', 'credit'];
+    const labels = {
+      all: 'All',
+      income: 'Income',
+      expense: 'Expenses',
+      transfer: 'Transfers',
+      debit: 'Debit',
+      credit: 'Credit',
+    };
+    const current = Transactions.filterType;
+    const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
+    Transactions.filterType = next;
+    typeFilter.querySelector('span').textContent = labels[next];
+    typeFilter.classList.toggle('active', next !== 'all');
     Transactions.render();
     return;
   }
