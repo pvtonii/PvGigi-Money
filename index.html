@@ -624,6 +624,18 @@ h1, h2, h3 {
   border-style: solid;
 }
 
+/* Category search input */
+.category-search {
+  font-size: 0.875rem !important;
+  padding: 8px 12px !important;
+  background: var(--bg-tertiary) !important;
+  border: 1px solid transparent !important;
+}
+.category-search:focus {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-default) !important;
+}
+
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -3988,7 +4000,7 @@ const Transactions = {
       : '<span class="text-tertiary">?</span>';
 
     return `
-      <div class="tx-row" data-edit-tx="${t.id}">
+      <div class="tx-row" data-edit-external-tx="${t.id}">
         <div class="tx-icon">👤</div>
         <div class="tx-info">
           <div class="tx-meta" style="font-size:0.875rem;color:var(--text-primary);font-weight:500;margin-bottom:3px;">
@@ -4080,7 +4092,9 @@ function openTransactionForm(transaction = null) {
     <!-- Categoria -->
     <div class="form-field">
       <label class="form-label">Category</label>
+      <input class="form-input category-search" id="tx-category-search" placeholder="🔍 Search categories…" autocomplete="off" style="margin-bottom: var(--space-2);">
       <div class="picker-grid" id="tx-category-picker"></div>
+      <button type="button" class="show-all-btn" id="tx-cat-show-all" style="display:none;">Show all categories</button>
     </div>
 
     <!-- Pagar com (Conta ou Cartão) -->
@@ -4117,7 +4131,8 @@ function openTransactionForm(transaction = null) {
         <input class="form-input" id="tx-date" type="date" value="${t.date}">
       </div>
       <div class="form-field">
-        <label class="form-label">Who paid / received</label>
+        <label class="form-label">Owner</label>
+        <div class="form-help" style="margin-top:0;margin-bottom:var(--space-2);">Whose expense/income this is — defaults to who's logged in</div>
         ${ownerToggleHtml(t.owner)}
       </div>
     </div>
@@ -4302,29 +4317,68 @@ function openTransactionForm(transaction = null) {
     }
   }
 
-  function renderCategoryPicker() {
-    const cats = State.categories.filter(c => c.type === selectedType);
-    const grid = document.getElementById('tx-category-picker');
+  let categorySearchTerm = '';
+  let categoryShowAll = false;
 
-    if (!cats.length) {
+  function renderCategoryPicker() {
+    const allCats = State.categories.filter(c => c.type === selectedType);
+    const grid = document.getElementById('tx-category-picker');
+    const showAllBtn = document.getElementById('tx-cat-show-all');
+
+    if (!allCats.length) {
       grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No ${selectedType === 'income' ? 'income' : 'expense'} categories.</div>`;
+      if (showAllBtn) showAllBtn.style.display = 'none';
       return;
     }
 
-    grid.innerHTML = cats.map(c => `
-      <div class="picker-item ${c.id === selectedCategoryId ? 'selected' : ''}" data-cat-id="${c.id}">
-        <div class="picker-emoji">${c.icon || '•'}</div>
-        <div class="picker-label">${escapeHtml(c.name)}</div>
-      </div>
-    `).join('');
+    // Apply search filter
+    const term = (categorySearchTerm || '').trim().toLowerCase();
+    let filtered = allCats;
+    if (term) {
+      filtered = allCats.filter(c => (c.name || '').toLowerCase().includes(term));
+    }
 
-    grid.querySelectorAll('.picker-item').forEach(el => {
-      el.addEventListener('click', () => {
-        selectedCategoryId = el.dataset.catId;
-        grid.querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
-        el.classList.add('selected');
+    // Paginate: show first 8 unless showAll
+    const VISIBLE_LIMIT = 8;
+    const isSearching = term.length > 0;
+    const shouldPaginate = !categoryShowAll && !isSearching && filtered.length > VISIBLE_LIMIT;
+    let visible = shouldPaginate ? filtered.slice(0, VISIBLE_LIMIT) : filtered;
+
+    // Always include the currently-selected category even if paginated out
+    if (shouldPaginate && selectedCategoryId && !visible.some(c => c.id === selectedCategoryId)) {
+      const sel = filtered.find(c => c.id === selectedCategoryId);
+      if (sel) visible = [sel, ...visible.slice(0, VISIBLE_LIMIT - 1)];
+    }
+
+    if (!visible.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No matches for "${escapeHtml(term)}"</div>`;
+    } else {
+      grid.innerHTML = visible.map(c => `
+        <div class="picker-item ${c.id === selectedCategoryId ? 'selected' : ''}" data-cat-id="${c.id}">
+          <div class="picker-emoji">${c.icon || '•'}</div>
+          <div class="picker-label">${escapeHtml(c.name)}</div>
+        </div>
+      `).join('');
+
+      grid.querySelectorAll('.picker-item').forEach(el => {
+        el.addEventListener('click', () => {
+          selectedCategoryId = el.dataset.catId;
+          grid.querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
+          el.classList.add('selected');
+        });
       });
-    });
+    }
+
+    // Show "Show all" button if paginated
+    if (showAllBtn) {
+      if (shouldPaginate) {
+        const hiddenCount = filtered.length - VISIBLE_LIMIT;
+        showAllBtn.textContent = `Show all categories (${hiddenCount} more)`;
+        showAllBtn.style.display = '';
+      } else {
+        showAllBtn.style.display = 'none';
+      }
+    }
   }
 
   function renderSourcePicker() {
@@ -4425,6 +4479,23 @@ function openTransactionForm(transaction = null) {
   updateInstallmentsVisibility();
   updateInstallmentsDisplay();
   updateAmbiguousWarning();
+
+  // Bind category search input (live filtering)
+  const catSearchInput = document.getElementById('tx-category-search');
+  if (catSearchInput) {
+    catSearchInput.addEventListener('input', (e) => {
+      categorySearchTerm = e.target.value;
+      renderCategoryPicker();
+    });
+  }
+  // Bind "Show all categories" button
+  const catShowAllBtn = document.getElementById('tx-cat-show-all');
+  if (catShowAllBtn) {
+    catShowAllBtn.addEventListener('click', () => {
+      categoryShowAll = true;
+      renderCategoryPicker();
+    });
+  }
 
   // Listener pra atualizar aviso quando trocar a data
   document.getElementById('tx-date').addEventListener('change', updateAmbiguousWarning);
@@ -4609,13 +4680,18 @@ function formatAmountInput(value) {
 /* ============================================
    TRANSFER FORM — Move money between accounts
    ============================================ */
-function openTransferForm(transferGroupId = null) {
-  const isEdit = !!transferGroupId;
+function openTransferForm(opts = null) {
+  // Backwards compat: if opts is a string, treat as transferGroupId
+  if (typeof opts === 'string') opts = { transferGroupId: opts };
+  const transferGroupId = opts?.transferGroupId || null;
+  const externalTxId = opts?.externalTxId || null;
+  const isEdit = !!(transferGroupId || externalTxId);
   const today = new Date().toISOString().split('T')[0];
 
-  // Load existing pair if editing
+  // Load existing transfer if editing
   let existing = null;
-  if (isEdit) {
+  let editingExternalTx = null; // reference to the external tx being edited (for update path)
+  if (transferGroupId) {
     const pair = State.transactions.filter(t => t.transfer_group_id === transferGroupId);
     const out = pair.find(t => t.type === 'expense');
     const inn = pair.find(t => t.type === 'income');
@@ -4623,7 +4699,6 @@ function openTransferForm(transferGroupId = null) {
       toast('Transfer not found', 'error');
       return;
     }
-    // If no income pair → it's an external transfer (just an expense)
     existing = {
       amount: out.amount,
       fromAccountId: out.account_id,
@@ -4633,6 +4708,24 @@ function openTransferForm(transferGroupId = null) {
       owner: out.owner,
       destType: inn ? 'account' : 'external',
       externalName: inn ? '' : (out.external_to || (out.description || '').replace(/^Transfer to /, '')),
+    };
+  } else if (externalTxId) {
+    // Editing external transfer (single expense with external_to)
+    const tx = State.transactions.find(t => t.id === externalTxId);
+    if (!tx) {
+      toast('Transfer not found', 'error');
+      return;
+    }
+    editingExternalTx = tx;
+    existing = {
+      amount: tx.amount,
+      fromAccountId: tx.account_id,
+      toAccountId: null,
+      description: tx.description || '',
+      date: tx.date,
+      owner: tx.owner,
+      destType: 'external',
+      externalName: tx.external_to || '',
     };
   }
 
@@ -4689,7 +4782,8 @@ function openTransferForm(transferGroupId = null) {
         <input class="form-input" id="tr-date" type="date" value="${t.date}">
       </div>
       <div class="form-field">
-        <label class="form-label">Initiated by</label>
+        <label class="form-label">Owner</label>
+        <div class="form-help" style="margin-top:0;margin-bottom:var(--space-2);">Whose money is this — defaults to who's logged in</div>
         ${ownerToggleHtml(t.owner)}
       </div>
     </div>
@@ -4834,31 +4928,27 @@ function openTransferForm(transferGroupId = null) {
       } else {
         // External transfer = expense flagged with external_to
         const desc = description || `Transfer to ${externalName}`;
-        if (isEdit) {
-          // Delete existing pair (could be internal that became external) and recreate
+        const row = {
+          type: 'expense', amount, date, description: desc,
+          account_id: selectedFrom, card_id: null,
+          category_id: null, owner,
+          is_transfer: false, transfer_group_id: null,
+          external_to: externalName,
+          installments_total: 1, installment_number: 1,
+        };
+        if (editingExternalTx) {
+          // Pure update — same row stays, no delete/recreate
+          await Data.updateTransaction(editingExternalTx.id, row);
+          toast('Transfer updated');
+        } else if (transferGroupId) {
+          // Was internal transfer, now external: delete pair and create new external
           await Data.deleteTransfer(transferGroupId);
-          const row = {
-            type: 'expense', amount, date, description: desc,
-            account_id: selectedFrom, card_id: null,
-            category_id: null, owner,
-            is_transfer: false, transfer_group_id: null,
-            external_to: externalName,
-            installments_total: 1, installment_number: 1,
-            created_by: Auth.getSession()?.userId,
-          };
+          row.created_by = Auth.getSession()?.userId;
           await Data.createTransaction(row);
           toast('Transfer updated');
         } else {
-          // Just create one expense flagged as external transfer
-          const row = {
-            type: 'expense', amount, date, description: desc,
-            account_id: selectedFrom, card_id: null,
-            category_id: null, owner,
-            is_transfer: false, transfer_group_id: null,
-            external_to: externalName,
-            installments_total: 1, installment_number: 1,
-            created_by: Auth.getSession()?.userId,
-          };
+          // New external transfer
+          row.created_by = Auth.getSession()?.userId;
           await Data.createTransaction(row);
           toast('External transfer saved');
         }
@@ -4877,7 +4967,11 @@ function openTransferForm(transferGroupId = null) {
     document.getElementById('tr-delete').addEventListener('click', async () => {
       if (!confirm('Delete this transfer?')) return;
       try {
-        await Data.deleteTransfer(transferGroupId);
+        if (editingExternalTx) {
+          await Data.deleteTransaction(editingExternalTx.id);
+        } else {
+          await Data.deleteTransfer(transferGroupId);
+        }
         toast('Transfer deleted');
         Modal.close();
         Transactions.render();
@@ -4961,7 +5055,8 @@ function openPayStatementForm(cardId, invoiceMonth) {
         <input class="form-input" id="pay-note" placeholder="Optional">
       </div>
       <div class="form-field">
-        <label class="form-label">Paid by</label>
+        <label class="form-label">Owner</label>
+        <div class="form-help" style="margin-top:0;margin-bottom:var(--space-2);">Defaults to who's logged in</div>
         ${ownerToggleHtml(Auth.getSession()?.userId || 'shared')}
       </div>
     </div>
@@ -5729,7 +5824,14 @@ document.addEventListener('click', (e) => {
   // Open transfer for editing
   const editTransfer = e.target.closest('[data-edit-transfer]');
   if (editTransfer) {
-    openTransferForm(editTransfer.dataset.editTransfer);
+    openTransferForm({ transferGroupId: editTransfer.dataset.editTransfer });
+    return;
+  }
+
+  // Open EXTERNAL transfer for editing
+  const editExternalTx = e.target.closest('[data-edit-external-tx]');
+  if (editExternalTx) {
+    openTransferForm({ externalTxId: editExternalTx.dataset.editExternalTx });
     return;
   }
 
