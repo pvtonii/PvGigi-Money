@@ -4032,9 +4032,10 @@ const Transactions = {
     const typeBadge = t.type === 'income'
       ? '<span class="type-badge income">↑ Income</span>'
       : '<span class="type-badge expense">↓ Expense</span>';
-    // Always show "by X" — author of the transaction (uses created_by, falls back to owner for legacy)
+    // "by X" only when transaction author differs from the source account/card owner
+    // (so when "PV used Gigi's card" or "PV used the shared card" we see who did it)
     const registeredBy = t.created_by || t.owner;
-    const byBadge = registeredBy
+    const byBadge = (registeredBy && source && registeredBy !== source.owner)
       ? `<span class="meta-by">by ${this.ownerAvatar(registeredBy, 12)}</span>`
       : '';
 
