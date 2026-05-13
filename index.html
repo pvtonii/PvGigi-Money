@@ -441,6 +441,13 @@ h1, h2, h3 {
   margin-top: var(--space-5);
 }
 .section-header:first-child { margin-top: 0; }
+.section-hint {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: -8px;
+  margin-bottom: var(--space-3);
+  line-height: 1.4;
+}
 .section-title {
   font-family: var(--font-display);
   font-size: 1.125rem;
@@ -2146,20 +2153,32 @@ html { scroll-behavior: smooth; }
       <div class="tab-content hidden" id="tab-recurring">
         <div class="section-header">
           <span class="section-title">Subscriptions</span>
-          <button class="section-add" data-add="subscription" data-type="expense">
+          <button class="section-add" data-add="subscription" data-kind="subscription">
             <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-linecap="round"/></svg>
             New
           </button>
         </div>
+        <div class="section-hint">Recurring charges on credit cards (Netflix, Spotify…)</div>
         <div class="item-list" id="list-subscriptions"></div>
 
         <div class="section-header">
-          <span class="section-title">Recurring income</span>
-          <button class="section-add" data-add="subscription" data-type="income">
+          <span class="section-title">Recurring expenses</span>
+          <button class="section-add" data-add="subscription" data-kind="recurring-expense">
             <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-linecap="round"/></svg>
             New
           </button>
         </div>
+        <div class="section-hint">Recurring bills paid from account (rent, electricity, gym…)</div>
+        <div class="item-list" id="list-recurring-expenses"></div>
+
+        <div class="section-header">
+          <span class="section-title">Recurring income</span>
+          <button class="section-add" data-add="subscription" data-kind="recurring-income">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-linecap="round"/></svg>
+            New
+          </button>
+        </div>
+        <div class="section-hint">Recurring deposits (salary, freelance retainers…)</div>
         <div class="item-list" id="list-recurring-income"></div>
       </div>
 
@@ -3251,11 +3270,18 @@ const Settings = {
   },
 
   renderRecurring() {
-    const expenses = State.subscriptions.filter(s => s.type === 'expense');
+    // 3 sections:
+    // - Subscriptions: expense + has card_id
+    // - Recurring expenses: expense + has account_id (no card)
+    // - Recurring income: income
+    const subscriptions = State.subscriptions.filter(s => s.type === 'expense' && !!s.card_id);
+    const recurringExpenses = State.subscriptions.filter(s => s.type === 'expense' && !s.card_id);
     const incomes = State.subscriptions.filter(s => s.type === 'income');
 
     document.getElementById('list-subscriptions').innerHTML =
-      expenses.length ? expenses.map(s => this.subscriptionRow(s)).join('') : this.emptyMsg('No subscriptions yet');
+      subscriptions.length ? subscriptions.map(s => this.subscriptionRow(s)).join('') : this.emptyMsg('No subscriptions yet');
+    document.getElementById('list-recurring-expenses').innerHTML =
+      recurringExpenses.length ? recurringExpenses.map(s => this.subscriptionRow(s)).join('') : this.emptyMsg('No recurring expenses yet');
     document.getElementById('list-recurring-income').innerHTML =
       incomes.length ? incomes.map(s => this.subscriptionRow(s)).join('') : this.emptyMsg('No recurring income yet');
   },
@@ -3673,21 +3699,35 @@ function openCardForm(card = null) {
 /* ============================================
    SUBSCRIPTION FORM — recurring expense or income
    ============================================ */
-function openSubscriptionForm(subscription = null, defaultType = 'expense') {
+function openSubscriptionForm(subscription = null, defaultKind = 'subscription') {
   const isEdit = !!subscription;
+
+  // Determine kind: 'subscription' (card expense) | 'recurring-expense' (account expense) | 'recurring-income'
+  let kind;
+  if (isEdit) {
+    if (subscription.type === 'income') kind = 'recurring-income';
+    else if (subscription.card_id) kind = 'subscription';
+    else kind = 'recurring-expense';
+  } else {
+    kind = defaultKind;
+  }
+
+  // Derive type from kind
+  const kindType = kind === 'recurring-income' ? 'income' : 'expense';
+  // Derive source restriction from kind
+  const kindForcesCard = kind === 'subscription';
+  const kindForcesAccount = kind === 'recurring-expense' || kind === 'recurring-income';
+
   const s = subscription || {
-    name: '', amount: '', billing_day: 1, type: defaultType,
+    name: '', amount: '', billing_day: 1, type: kindType,
     account_id: null, card_id: null, owner: 'shared', is_active: true,
   };
 
-  // Pre-select source: prefer card if set, else first account or null
-  let selectedSource = s.card_id ? 'card' : 'account';
+  // Pre-select source based on kind
+  let selectedSource = kindForcesCard ? 'card' : 'account';
   let selectedAccountId = s.account_id;
   let selectedCardId = s.card_id;
-  let selectedType = s.type;
-
-  // For income, only account source makes sense (you don't get paid via credit card)
-  if (selectedType === 'income') selectedSource = 'account';
+  let selectedType = kindType;
 
   const accountOptions = State.accounts.map(a =>
     `<option value="${a.id}" ${a.id === selectedAccountId ? 'selected' : ''}>${escapeHtml(a.name)}</option>`
@@ -3697,9 +3737,13 @@ function openSubscriptionForm(subscription = null, defaultType = 'expense') {
     `<option value="${c.id}" ${c.id === selectedCardId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
   ).join('');
 
-  const title = isEdit
-    ? (selectedType === 'income' ? 'Edit recurring income' : 'Edit subscription')
-    : (defaultType === 'income' ? 'New recurring income' : 'New subscription');
+  const kindLabels = {
+    'subscription': { title: 'subscription', sourceLabel: 'Charged to card', placeholder: 'e.g. Netflix' },
+    'recurring-expense': { title: 'recurring expense', sourceLabel: 'Paid from account', placeholder: 'e.g. Rent' },
+    'recurring-income': { title: 'recurring income', sourceLabel: 'Deposited into', placeholder: 'e.g. Salary' },
+  };
+  const labels = kindLabels[kind];
+  const title = isEdit ? `Edit ${labels.title}` : `New ${labels.title}`;
 
   Modal.open(title, `
     <input class="amount-input" id="sub-amount" type="text" inputmode="decimal" placeholder="$0.00"
@@ -3707,7 +3751,7 @@ function openSubscriptionForm(subscription = null, defaultType = 'expense') {
 
     <div class="form-field">
       <label class="form-label">Name</label>
-      <input class="form-input" id="sub-name" value="${escapeHtml(s.name)}" placeholder="${selectedType === 'income' ? 'e.g. Salary' : 'e.g. Netflix'}">
+      <input class="form-input" id="sub-name" value="${escapeHtml(s.name)}" placeholder="${labels.placeholder}">
     </div>
 
     <div class="form-field">
@@ -3716,25 +3760,17 @@ function openSubscriptionForm(subscription = null, defaultType = 'expense') {
       <div class="form-help">Day of the month it gets charged / received</div>
     </div>
 
-    ${selectedType === 'expense' ? `
-      <div class="form-field" id="sub-source-block">
-        <label class="form-label">Paid with</label>
-        <div class="payment-source-toggle" id="sub-source-toggle">
-          <button type="button" data-source="account" class="${selectedSource === 'account' ? 'active' : ''}">🏦 Account</button>
-          <button type="button" data-source="card" class="${selectedSource === 'card' ? 'active' : ''}">💳 Card</button>
-        </div>
-        <select class="form-select" id="sub-account" style="margin-top:var(--space-2); ${selectedSource === 'account' ? '' : 'display:none;'}">
-          <option value="">— select account —</option>
-          ${accountOptions}
-        </select>
-        <select class="form-select" id="sub-card" style="margin-top:var(--space-2); ${selectedSource === 'card' ? '' : 'display:none;'}">
+    ${kindForcesCard ? `
+      <div class="form-field">
+        <label class="form-label">${labels.sourceLabel}</label>
+        <select class="form-select" id="sub-card">
           <option value="">— select card —</option>
           ${cardOptions}
         </select>
       </div>
     ` : `
       <div class="form-field">
-        <label class="form-label">Deposited into</label>
+        <label class="form-label">${labels.sourceLabel}</label>
         <select class="form-select" id="sub-account">
           <option value="">— select account —</option>
           ${accountOptions}
@@ -3764,22 +3800,6 @@ function openSubscriptionForm(subscription = null, defaultType = 'expense') {
   `);
 
   bindOwnerToggle();
-
-  // Source toggle (expense only)
-  const sourceToggle = document.getElementById('sub-source-toggle');
-  if (sourceToggle) {
-    sourceToggle.querySelectorAll('button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        sourceToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        selectedSource = btn.dataset.source;
-        const acctSel = document.getElementById('sub-account');
-        const cardSel = document.getElementById('sub-card');
-        if (acctSel) acctSel.style.display = selectedSource === 'account' ? '' : 'none';
-        if (cardSel) cardSel.style.display = selectedSource === 'card' ? '' : 'none';
-      });
-    });
-  }
 
   setTimeout(() => document.getElementById('sub-amount').focus(), 300);
 
@@ -5878,7 +5898,7 @@ document.addEventListener('click', (e) => {
     if (what === 'category') openCategoryForm(null, addBtn.dataset.type || 'expense');
     if (what === 'account') openAccountForm(null);
     if (what === 'card') openCardForm(null);
-    if (what === 'subscription') openSubscriptionForm(null, addBtn.dataset.type || 'expense');
+    if (what === 'subscription') openSubscriptionForm(null, addBtn.dataset.kind || 'subscription');
     return;
   }
 
