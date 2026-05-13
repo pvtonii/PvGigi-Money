@@ -915,6 +915,34 @@ h1, h2, h3 {
   line-height: 1.5;
 }
 
+/* Audit info: created_at + updated_at in More options (read-only) */
+.audit-info {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.audit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 0.75rem;
+}
+.audit-label {
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+.audit-value {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  text-align: right;
+}
+
 .owner-toggle {
   display: flex;
   gap: var(--space-2);
@@ -2641,7 +2669,10 @@ const Data = {
   async createTransaction(data) {
     if (!db) throw new Error('Supabase not configured');
     Status.set('syncing', 'Saving…');
-    const { data: row, error } = await db.from('transactions').insert([data]).select().single();
+    // Always stamp with device timestamp
+    const now = new Date().toISOString();
+    const payload = { ...data, created_at: now, updated_at: now };
+    const { data: row, error } = await db.from('transactions').insert([payload]).select().single();
     if (error) { Status.set('disconnected', 'Save failed'); throw error; }
     State.transactions.unshift(row);
     this._setReady();
@@ -2651,7 +2682,9 @@ const Data = {
   async createTransactionsBatch(rows) {
     if (!db) throw new Error('Supabase not configured');
     Status.set('syncing', 'Saving installments…');
-    const { data, error } = await db.from('transactions').insert(rows).select();
+    const now = new Date().toISOString();
+    const stamped = rows.map(r => ({ ...r, created_at: now, updated_at: now }));
+    const { data, error } = await db.from('transactions').insert(stamped).select();
     if (error) { Status.set('disconnected', 'Failed saving installments'); throw error; }
     (data || []).forEach(r => State.transactions.unshift(r));
     this._setReady();
@@ -2660,7 +2693,10 @@ const Data = {
   async updateTransaction(id, data) {
     if (!db) throw new Error('Supabase not configured');
     Status.set('syncing', 'Updating…');
-    const { data: row, error } = await db.from('transactions').update(data).eq('id', id).select().single();
+    // Always refresh updated_at (but never let caller override created_at)
+    const { created_at, ...rest } = data;
+    const payload = { ...rest, updated_at: new Date().toISOString() };
+    const { data: row, error } = await db.from('transactions').update(payload).eq('id', id).select().single();
     if (error) { Status.set('disconnected', 'Update failed'); throw error; }
     const idx = State.transactions.findIndex(t => t.id === id);
     if (idx >= 0) State.transactions[idx] = row;
@@ -2685,6 +2721,7 @@ const Data = {
     const fromAcc = State.accounts.find(a => a.id === fromAccountId);
     const toAcc = State.accounts.find(a => a.id === toAccountId);
     const baseDesc = description || `Transfer: ${fromAcc?.name || ''} → ${toAcc?.name || ''}`;
+    const now = new Date().toISOString();
 
     const rows = [
       // Out (expense from source)
@@ -2695,6 +2732,7 @@ const Data = {
         is_transfer: true, transfer_group_id: groupId,
         installments_total: 1, installment_number: 1,
         created_by: Auth.getSession()?.userId,
+        created_at: now, updated_at: now,
       },
       // In (income to destination)
       {
@@ -2704,6 +2742,7 @@ const Data = {
         is_transfer: true, transfer_group_id: groupId,
         installments_total: 1, installment_number: 1,
         created_by: Auth.getSession()?.userId,
+        created_at: now, updated_at: now,
       },
     ];
 
@@ -2729,7 +2768,7 @@ const Data = {
     const inn = pair.find(t => t.type === 'income');
     if (!out || !inn) throw new Error('Transfer pair not found');
 
-    const baseUpdate = { amount, date, description: baseDesc, owner };
+    const baseUpdate = { amount, date, description: baseDesc, owner, updated_at: new Date().toISOString() };
 
     const [r1, r2] = await Promise.all([
       db.from('transactions')
@@ -3033,6 +3072,20 @@ const App = {
       style: 'currency', currency: 'USD',
       minimumFractionDigits: 2, maximumFractionDigits: 2,
     }).format(Number(value) || 0);
+  },
+  /** Format ISO timestamp to localized date+time string (uses device locale) */
+  formatTimestamp(iso) {
+    if (!iso) return '—';
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleString(undefined, {
+        year: 'numeric', month: 'short', day: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+      });
+    } catch {
+      return '—';
+    }
   },
   renderUserBadge() {
     const user = Auth.getSession();
@@ -4252,6 +4305,18 @@ function openTransactionForm(transaction = null) {
         <label class="form-label">Date</label>
         <input class="form-input" id="tx-date" type="date" value="${t.date}">
       </div>
+      ${isEdit ? `
+        <div class="audit-info">
+          <div class="audit-row">
+            <span class="audit-label">Created</span>
+            <span class="audit-value">${App.formatTimestamp(t.created_at)}</span>
+          </div>
+          <div class="audit-row">
+            <span class="audit-label">Last updated</span>
+            <span class="audit-value">${App.formatTimestamp(t.updated_at)}</span>
+          </div>
+        </div>
+      ` : ''}
     </div>
 
     <!-- Aviso de fatura ambígua + botão mover (preenchido dinamicamente) -->
@@ -4832,6 +4897,8 @@ function openTransferForm(opts = null) {
       owner: out.owner,
       destType: inn ? 'account' : 'external',
       externalName: inn ? '' : (out.external_to || (out.description || '').replace(/^Transfer to /, '')),
+      created_at: out.created_at,
+      updated_at: out.updated_at,
     };
   } else if (externalTxId) {
     // Editing external transfer (single expense with external_to)
@@ -4850,6 +4917,8 @@ function openTransferForm(opts = null) {
       owner: tx.owner,
       destType: 'external',
       externalName: tx.external_to || '',
+      created_at: tx.created_at,
+      updated_at: tx.updated_at,
     };
   }
 
@@ -4905,6 +4974,18 @@ function openTransferForm(opts = null) {
         <label class="form-label">Date</label>
         <input class="form-input" id="tr-date" type="date" value="${t.date}">
       </div>
+      ${isEdit ? `
+        <div class="audit-info">
+          <div class="audit-row">
+            <span class="audit-label">Created</span>
+            <span class="audit-value">${App.formatTimestamp(t.created_at)}</span>
+          </div>
+          <div class="audit-row">
+            <span class="audit-label">Last updated</span>
+            <span class="audit-value">${App.formatTimestamp(t.updated_at)}</span>
+          </div>
+        </div>
+      ` : ''}
     </div>
 
     <div class="flex gap-3" style="margin-top: var(--space-5);">
