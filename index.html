@@ -3374,17 +3374,16 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-function ownerToggleHtml(currentOwner = 'shared') {
+function ownerToggleHtml(currentOwner = null) {
+  // Default to current logged-in user if no owner set
+  const owner = currentOwner || Auth.getSession()?.userId || 'pv';
   return `
     <div class="owner-toggle" id="owner-toggle">
-      <button type="button" data-owner="pv" class="${currentOwner === 'pv' ? 'active' : ''}">
+      <button type="button" data-owner="pv" class="${owner === 'pv' ? 'active' : ''}">
         <div class="user-avatar pv">P</div> PV
       </button>
-      <button type="button" data-owner="gigi" class="${currentOwner === 'gigi' ? 'active' : ''}">
+      <button type="button" data-owner="gigi" class="${owner === 'gigi' ? 'active' : ''}">
         <div class="user-avatar gigi">G</div> Gigi
-      </button>
-      <button type="button" data-owner="shared" class="${currentOwner === 'shared' ? 'active' : ''}">
-        <div class="user-avatar shared">S</div> Both
       </button>
     </div>
   `;
@@ -3402,12 +3401,12 @@ function bindOwnerToggle() {
 }
 function getSelectedOwner() {
   const active = document.querySelector('#owner-toggle button.active');
-  return active ? active.dataset.owner : 'shared';
+  return active ? active.dataset.owner : (Auth.getSession()?.userId || 'pv');
 }
 
 function openCategoryForm(category = null, defaultType = 'expense') {
   const isEdit = !!category;
-  const c = category || { name: '', icon: '', type: defaultType, owner: 'shared' };
+  const c = category || { name: '', icon: '', type: defaultType, owner: (Auth.getSession()?.userId || 'pv') };
 
   Modal.open(isEdit ? 'Edit category' : 'New category', `
     <div class="form-field">
@@ -3494,7 +3493,7 @@ function openCategoryForm(category = null, defaultType = 'expense') {
 
 function openAccountForm(account = null) {
   const isEdit = !!account;
-  const a = account || { name: '', type: 'checking', initial_balance: 0, owner: 'shared' };
+  const a = account || { name: '', type: 'checking', initial_balance: 0, owner: (Auth.getSession()?.userId || 'pv') };
 
   Modal.open(isEdit ? 'Edit account' : 'New account', `
     <div class="form-field">
@@ -3577,7 +3576,7 @@ function openCardForm(card = null) {
   const c = card || {
     name: '', brand: '', last_digits: '',
     credit_limit: 0, closing_day: 1, due_day: 10,
-    payment_mode: 'full', account_id: null, owner: 'shared',
+    payment_mode: 'full', account_id: null, owner: (Auth.getSession()?.userId || 'pv'),
   };
 
   const accountOptions = State.accounts.map(a =>
@@ -3720,7 +3719,7 @@ function openSubscriptionForm(subscription = null, defaultKind = 'subscription')
 
   const s = subscription || {
     name: '', amount: '', billing_day: 1, type: kindType,
-    account_id: null, card_id: null, owner: 'shared', is_active: true,
+    account_id: null, card_id: null, owner: (Auth.getSession()?.userId || 'pv'), is_active: true,
   };
 
   // Pre-select source based on kind
@@ -4198,7 +4197,7 @@ function openTransactionForm(transaction = null) {
     account_id: State.accounts[0]?.id || null,
     card_id: null,
     installments_total: 1,
-    owner: Auth.getSession()?.userId || 'shared',
+    owner: Auth.getSession()?.userId || 'pv',
   };
 
   // Source: 'account' ou 'card'
@@ -4514,24 +4513,21 @@ function openTransactionForm(transaction = null) {
     const oldBtn = document.getElementById('tx-show-all');
     if (oldBtn) oldBtn.remove();
 
-    // Filter accounts/cards: show only mine + shared, unless "Show all" is on
+    // Filter accounts/cards: show only mine, unless "Show all" is on
     // OR unless the currently-selected one is from another owner (edit case)
     const filterByOwner = (items, selectedId) => {
       if (showAllSources) return items;
       const selected = items.find(i => i.id === selectedId);
-      const selectedNeedsAllShown = selected && selected.owner !== currentUserId && selected.owner !== 'shared';
+      const selectedNeedsAllShown = selected && selected.owner !== currentUserId;
       if (selectedNeedsAllShown) return items;
-      return items.filter(i => i.owner === currentUserId || i.owner === 'shared');
+      return items.filter(i => i.owner === currentUserId);
     };
 
     if (selectedSource === 'account') {
       const visible = filterByOwner(State.accounts, selectedAccountId);
       const totalCount = State.accounts.length;
-      const hiddenCount = totalCount - (showAllSources
-        ? State.accounts.filter(a => a.owner !== currentUserId && a.owner !== 'shared').length
-        : totalCount - visible.length);
-      // Simpler: how many are NOT mine+shared
-      const notMineCount = State.accounts.filter(a => a.owner !== currentUserId && a.owner !== 'shared').length;
+      // How many are NOT mine
+      const notMineCount = State.accounts.filter(a => a.owner !== currentUserId).length;
 
       if (!totalCount) {
         grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No accounts. Add one in Settings.</div>`;
@@ -4569,7 +4565,7 @@ function openTransactionForm(transaction = null) {
       // Cards
       const visible = filterByOwner(State.cards, selectedCardId);
       const totalCount = State.cards.length;
-      const notMineCount = State.cards.filter(c => c.owner !== currentUserId && c.owner !== 'shared').length;
+      const notMineCount = State.cards.filter(c => c.owner !== currentUserId).length;
 
       if (!totalCount) {
         grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No cards. Add one in Settings.</div>`;
@@ -4646,7 +4642,7 @@ function openTransactionForm(transaction = null) {
     const description = document.getElementById('tx-description').value.trim();
     const date = document.getElementById('tx-date').value;
     // Owner is always the logged-in user (preserve when editing existing transaction)
-    const owner = isEdit ? t.owner : (Auth.getSession()?.userId || 'shared');
+    const owner = isEdit ? t.owner : (Auth.getSession()?.userId || 'pv');
 
     if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
     if (!date) return toast('Please select a date', 'error');
@@ -4872,7 +4868,7 @@ function openTransferForm(opts = null) {
     toAccountId: State.accounts.find(a => a.id !== State.accounts[0]?.id)?.id || null,
     description: '',
     date: today,
-    owner: Auth.getSession()?.userId || 'shared',
+    owner: Auth.getSession()?.userId || 'pv',
     destType: 'account',
     externalName: '',
   };
@@ -5025,7 +5021,7 @@ function openTransferForm(opts = null) {
     const description = document.getElementById('tr-description').value.trim();
     const date = document.getElementById('tr-date').value;
     // Owner = current user (preserve when editing)
-    const owner = isEdit ? t.owner : (Auth.getSession()?.userId || 'shared');
+    const owner = isEdit ? t.owner : (Auth.getSession()?.userId || 'pv');
     const externalName = document.getElementById('tr-external-name').value.trim();
 
     if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
@@ -5235,7 +5231,7 @@ function openPayStatementForm(cardId, invoiceMonth) {
     const date = document.getElementById('pay-date').value;
     const note = document.getElementById('pay-note').value.trim();
     // Owner = current user
-    const owner = Auth.getSession()?.userId || 'shared';
+    const owner = Auth.getSession()?.userId || 'pv';
 
     if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
     if (!selectedAccountId) return toast('Please select an account', 'error');
@@ -5703,7 +5699,8 @@ const Dashboard = {
       if (a.owner === 'pv') balances.pv += balance;
       else if (a.owner === 'gigi') balances.gigi += balance;
       else {
-        // 'shared' OR any unknown owner: split 50/50 so total always matches Today's balance
+        // Defensive fallback for any legacy 'shared' or unknown owner: split 50/50
+        // so the total still matches Today's balance.
         balances.pv += balance / 2;
         balances.gigi += balance / 2;
       }
@@ -5991,8 +5988,8 @@ document.addEventListener('click', (e) => {
   // Owner filter (cycle: all → pv → gigi → shared → all)
   const ownerFilter = e.target.closest('.tx-filter[data-owner-filter]');
   if (ownerFilter) {
-    const cycle = ['all', 'pv', 'gigi', 'shared'];
-    const labels = { all: 'Anyone', pv: 'PV', gigi: 'Gigi', shared: 'Shared' };
+    const cycle = ['all', 'pv', 'gigi'];
+    const labels = { all: 'Anyone', pv: 'PV', gigi: 'Gigi' };
     const current = Transactions.filterOwner;
     const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
     Transactions.filterOwner = next;
