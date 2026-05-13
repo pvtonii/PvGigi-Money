@@ -2479,7 +2479,7 @@ const Data = {
         db.from('categories').select('*').order('name'),
         db.from('accounts').select('*').order('name'),
         db.from('cards').select('*').order('name'),
-        db.from('transactions').select('*').order('date', { ascending: false }),
+        db.from('transactions').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }),
         db.from('subscriptions').select('*').order('billing_day'),
       ]);
       if (cats.error) throw cats.error;
@@ -3943,6 +3943,15 @@ const Transactions = {
       groups[day].push(t);
     });
 
+    // Sort transactions within each day: newest first (by created_at if available, else by id)
+    Object.keys(groups).forEach(day => {
+      groups[day].sort((a, b) => {
+        const aKey = a.created_at || a.id || '';
+        const bKey = b.created_at || b.id || '';
+        return bKey.localeCompare(aKey);
+      });
+    });
+
     const sortedDays = Object.keys(groups).sort().reverse();
 
     container.innerHTML = sortedDays.map(day => {
@@ -4003,6 +4012,11 @@ const Transactions = {
     const typeBadge = t.type === 'income'
       ? '<span class="type-badge income">↑ Income</span>'
       : '<span class="type-badge expense">↓ Expense</span>';
+    // Owner chip: show when transaction owner differs from source account owner
+    // (so PV gave Gigi the gift even though account is shared, etc.)
+    const ownerChip = (t.owner && source && t.owner !== source.owner)
+      ? `<span class="meta-by">for ${this.ownerAvatar(t.owner, 12)}</span>`
+      : '';
     const byBadge = this.byChip(t);
 
     return `
@@ -4015,6 +4029,7 @@ const Transactions = {
             <span>·</span>
             <span class="meta-source">${escapeHtml(sourceLabel)} ${sourceOwnerAvatar}</span>
             ${installmentBadge ? `<span>·</span>${installmentBadge}` : ''}
+            ${ownerChip ? `<span>·</span>${ownerChip}` : ''}
             ${byBadge ? `<span>·</span>${byBadge}` : ''}
           </div>
         </div>
@@ -5787,6 +5802,13 @@ const Dashboard = {
    EVENTS
    ============================================ */
 document.getElementById('theme-toggle').addEventListener('click', () => App.toggleTheme());
+
+// Try to lock orientation to portrait (works in PWA mode, ignored in browser)
+if (screen.orientation && typeof screen.orientation.lock === 'function') {
+  screen.orientation.lock('portrait').catch(() => {
+    // Silently fail — browsers reject this outside PWA / fullscreen
+  });
+}
 
 // Refresh button — forces reload bypassing cache
 document.getElementById('refresh-btn').addEventListener('click', () => {
