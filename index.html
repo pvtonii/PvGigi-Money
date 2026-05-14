@@ -1123,7 +1123,8 @@ h1, h2, h3 {
 }
 
 /* Filtros de transações */
-.tx-filters {
+.tx-filters,
+.cards-filters {
   display: flex;
   gap: var(--space-2);
   margin-bottom: var(--space-4);
@@ -1131,7 +1132,87 @@ h1, h2, h3 {
   scrollbar-width: none;
   padding-bottom: var(--space-1);
 }
-.tx-filters::-webkit-scrollbar { display: none; }
+.tx-filters::-webkit-scrollbar,
+.cards-filters::-webkit-scrollbar { display: none; }
+
+/* Best to use today section */
+.best-to-use-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.best-to-use-header {
+  margin-bottom: var(--space-3);
+}
+.best-to-use-title {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.best-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: opacity var(--duration);
+}
+.best-card:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.best-card:first-child {
+  padding-top: 0;
+}
+.best-card:hover { opacity: 0.85; }
+.best-card.no-credit { opacity: 0.5; }
+.best-medal {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+.best-info {
+  flex: 1;
+  min-width: 0;
+}
+.best-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.best-main {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+.best-state {
+  margin-top: 4px;
+}
+.best-warn {
+  font-size: 0.6875rem;
+  color: var(--warning);
+  font-weight: 500;
+}
+.best-fresh {
+  font-size: 0.6875rem;
+  color: var(--success);
+  font-weight: 500;
+}
+.best-no-credit {
+  font-size: 0.75rem;
+  color: var(--danger);
+  font-weight: 500;
+}
 .tx-filter {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-full);
@@ -2880,6 +2961,89 @@ const Invoice = {
     } else {
       return new Date(closingDate.getFullYear(), closingDate.getMonth() + 1, due);
     }
+  },
+
+  /**
+   * Returns ranking info for a card based on TODAY's purchase:
+   *   - daysToDue: how many days until you'd pay a purchase made now
+   *   - dueDate: the date when that purchase would be due
+   *   - state: 'safe' | 'ambiguous' | 'just-closed'
+   *   - ambiguousRange: if ambiguous, { min, max, earlyDue, lateDue }
+   *   - availableCredit: how much room left
+   *   - hasNoCredit: true if used >= limit
+   */
+  rankCardForToday(card, today = new Date()) {
+    const closing = Number(card.closing_day);
+    if (!closing) return null;
+
+    const todayDay = today.getDate();
+    // Distance from today to closing day (always positive, 0-15ish)
+    const daysToClosing = Math.min(
+      Math.abs(todayDay - closing),
+      31 - Math.abs(todayDay - closing)
+    );
+    const AMBIGUOUS_WINDOW = 3;
+
+    // Just-closed: today is right after closing (1-3 days)
+    // we figure this by computing if closing happened in the last 3 days
+    const todayClone = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const closingThisMonth = new Date(today.getFullYear(), today.getMonth(), closing);
+    const daysSinceClosing = Math.floor((todayClone - closingThisMonth) / (1000 * 60 * 60 * 24));
+
+    // State detection
+    let state = 'safe';
+    let ambiguousRange = null;
+
+    if (daysToClosing <= AMBIGUOUS_WINDOW) {
+      // We're in the window — could go to either invoice
+      state = 'ambiguous';
+      // Early scenario: purchase goes to closer invoice
+      const closingDate = this.nextClosingDate(card, today);
+      const dueDay = Number(card.due_day);
+      // "Early due" = if it cuts into THIS cycle (sooner)
+      // "Late due" = if it goes to NEXT cycle
+      let earlyDue, lateDue;
+      if (todayDay <= closing) {
+        // Today could still go to current cycle (early) OR next cycle (late)
+        earlyDue = dueDay > closing
+          ? new Date(closingDate.getFullYear(), closingDate.getMonth(), dueDay)
+          : new Date(closingDate.getFullYear(), closingDate.getMonth() + 1, dueDay);
+        const nextClose = new Date(closingDate.getFullYear(), closingDate.getMonth() + 1, closing);
+        lateDue = dueDay > closing
+          ? new Date(nextClose.getFullYear(), nextClose.getMonth(), dueDay)
+          : new Date(nextClose.getFullYear(), nextClose.getMonth() + 1, dueDay);
+      } else {
+        // Today already past closing — went to next cycle (early) but operator may delay to one after (late)
+        earlyDue = this.nextDueDate(card, today);
+        const further = new Date(today.getFullYear(), today.getMonth() + 1, todayDay);
+        lateDue = this.nextDueDate(card, further);
+      }
+      const minDays = Math.floor((earlyDue - todayClone) / (1000 * 60 * 60 * 24));
+      const maxDays = Math.floor((lateDue - todayClone) / (1000 * 60 * 60 * 24));
+      ambiguousRange = { min: minDays, max: maxDays, earlyDue, lateDue };
+    } else if (daysSinceClosing >= 0 && daysSinceClosing <= 5) {
+      // Just closed within last 5 days — typically the longest cycle
+      state = 'just-closed';
+    }
+
+    const dueDate = this.nextDueDate(card, today);
+    const daysToDue = Math.floor((dueDate - todayClone) / (1000 * 60 * 60 * 24));
+
+    // Credit availability
+    const used = this.getCreditUsed(card.id);
+    const limit = Number(card.credit_limit) || 0;
+    const availableCredit = Math.max(0, limit - used);
+    const hasNoCredit = limit > 0 && availableCredit <= 0;
+
+    return {
+      card,
+      state,
+      daysToDue,
+      dueDate,
+      ambiguousRange,
+      availableCredit,
+      hasNoCredit,
+    };
   },
 
   /** Lista todas as transações de uma fatura específica de um cartão */
@@ -5394,6 +5558,7 @@ const Cards = {
   view: 'list',
   selectedCardId: null,
   selectedInvoiceMonth: null,
+  filterOwner: 'all', // 'all' | 'pv' | 'gigi'
 
   render() {
     const container = document.getElementById('cards-page-content');
@@ -5416,7 +5581,60 @@ const Cards = {
       `;
     }
 
-    return State.cards.map(card => {
+    // Apply owner filter
+    const filtered = this.filterOwner === 'all'
+      ? State.cards
+      : State.cards.filter(c => c.owner === this.filterOwner);
+
+    // Owner filter chip (cyclic: all → pv → gigi → all)
+    const ownerLabels = { all: 'All cards', pv: 'PV', gigi: 'Gigi' };
+    const filterChip = `
+      <div class="cards-filters">
+        <button class="tx-filter ${this.filterOwner !== 'all' ? 'active' : ''}" data-cards-owner-filter>
+          <span style="font-size:0.6875rem;">${ownerLabels[this.filterOwner]}</span>
+        </button>
+      </div>
+    `;
+
+    if (!filtered.length) {
+      return filterChip + `
+        <div class="empty-state">
+          <div class="empty-state-title">No cards for ${this.filterOwner === 'pv' ? 'PV' : 'Gigi'}</div>
+          <p class="empty-state-text">Try another filter or add cards in <strong>Settings → Cards</strong>.</p>
+        </div>
+      `;
+    }
+
+    // === Best to use today section ===
+    const today = new Date();
+    const rankings = filtered
+      .map(card => Invoice.rankCardForToday(card, today))
+      .filter(r => r !== null);
+
+    // Sort: just-closed first (longest cycle), then safe by daysToDue desc,
+    // then ambiguous by min days desc, no-credit at the bottom
+    const stateOrder = { 'just-closed': 0, 'safe': 1, 'ambiguous': 2 };
+    rankings.sort((a, b) => {
+      // No credit goes to bottom
+      if (a.hasNoCredit && !b.hasNoCredit) return 1;
+      if (!a.hasNoCredit && b.hasNoCredit) return -1;
+      // Otherwise by ranking metric (days)
+      const aDays = a.state === 'ambiguous' ? a.ambiguousRange.min : a.daysToDue;
+      const bDays = b.state === 'ambiguous' ? b.ambiguousRange.min : b.daysToDue;
+      return bDays - aDays; // descending — more days = better
+    });
+
+    const medals = ['🥇', '🥈', '🥉'];
+    const bestToUseHtml = rankings.length > 1 ? `
+      <div class="best-to-use-section">
+        <div class="best-to-use-header">
+          <span class="best-to-use-title">Best to use today</span>
+        </div>
+        ${rankings.map((r, idx) => this.renderBestCard(r, medals[idx] || '•')).join('')}
+      </div>
+    ` : '';
+
+    const cardsHtml = filtered.map(card => {
       // Fatura aberta = próxima a vencer (já fechou ou vai fechar)
       const todayStr = new Date().toISOString().split('T')[0];
       const currentInvoice = Invoice.computeMonthString(todayStr, card);
@@ -5460,6 +5678,47 @@ const Cards = {
         </div>
       `;
     }).join('');
+
+    return filterChip + bestToUseHtml + cardsHtml;
+  },
+
+  /** Render single card in "Best to use today" ranking */
+  renderBestCard(r, medal) {
+    const card = r.card;
+    const dueDateStr = this.formatShortDate(r.dueDate);
+    let mainLine;
+    let stateClass = '';
+    let stateIcon = '';
+
+    if (r.hasNoCredit) {
+      mainLine = `<span class="best-no-credit">No credit available</span>`;
+      stateClass = 'no-credit';
+    } else if (r.state === 'ambiguous') {
+      const { min, max, earlyDue, lateDue } = r.ambiguousRange;
+      const earlyStr = this.formatShortDate(earlyDue);
+      const lateStr = this.formatShortDate(lateDue);
+      mainLine = `${min}–${max} days · pay ${earlyStr} or ${lateStr}`;
+      stateClass = 'ambiguous';
+      stateIcon = '<span class="best-warn">⚠️ Closing window</span>';
+    } else if (r.state === 'just-closed') {
+      mainLine = `${r.daysToDue} days · pay ${dueDateStr}`;
+      stateClass = 'just-closed';
+      stateIcon = '<span class="best-fresh">Just closed — full cycle</span>';
+    } else {
+      mainLine = `${r.daysToDue} days · pay ${dueDateStr}`;
+      stateClass = 'safe';
+    }
+
+    return `
+      <div class="best-card ${stateClass}" data-open-card="${card.id}">
+        <span class="best-medal">${medal}</span>
+        <div class="best-info">
+          <div class="best-name">${escapeHtml(card.name)} <span class="inline-avatar ${card.owner}" style="width:14px;height:14px;font-size:0.5625rem;">${card.owner === 'pv' ? 'P' : 'G'}</span></div>
+          <div class="best-main">${mainLine}</div>
+          ${stateIcon ? `<div class="best-state">${stateIcon}</div>` : ''}
+        </div>
+      </div>
+    `;
   },
 
   renderDetail() {
@@ -6058,6 +6317,17 @@ document.addEventListener('click', (e) => {
   }
 
   // Owner filter (cycle: all → pv → gigi → shared → all)
+  // Cards owner filter (cycle: all → pv → gigi → all)
+  const cardsOwnerFilter = e.target.closest('[data-cards-owner-filter]');
+  if (cardsOwnerFilter) {
+    const cycle = ['all', 'pv', 'gigi'];
+    const current = Cards.filterOwner;
+    const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
+    Cards.filterOwner = next;
+    Cards.render();
+    return;
+  }
+
   const ownerFilter = e.target.closest('.tx-filter[data-owner-filter]');
   if (ownerFilter) {
     const cycle = ['all', 'pv', 'gigi'];
