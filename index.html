@@ -1135,6 +1135,48 @@ h1, h2, h3 {
 .tx-filters::-webkit-scrollbar,
 .cards-filters::-webkit-scrollbar { display: none; }
 
+/* Search bar for Activity */
+.tx-search-wrap {
+  position: relative;
+  margin-bottom: var(--space-2);
+}
+.tx-search-input {
+  width: 100%;
+  padding: 10px 36px 10px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: border-color var(--duration);
+}
+.tx-search-input:focus {
+  border-color: var(--border-default);
+  background: var(--bg-tertiary);
+}
+.tx-search-input::placeholder {
+  color: var(--text-tertiary);
+}
+.tx-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tx-search-clear:hover {
+  background: var(--text-tertiary);
+  color: var(--bg-primary);
+}
+
 /* Best to use today section */
 .best-to-use-section {
   background: var(--bg-secondary);
@@ -2501,12 +2543,19 @@ html { scroll-behavior: smooth; }
     </section>
 
     <section class="page" id="page-transactions">
+      <div class="tx-search-wrap">
+        <input class="tx-search-input" id="tx-search" type="text" placeholder="🔍 Search by description or category…" autocomplete="off">
+        <button class="tx-search-clear" id="tx-search-clear" style="display:none;">✕</button>
+      </div>
       <div class="tx-filters">
         <button class="tx-filter active cyclic" data-type-filter="all">
           <span style="font-size:0.6875rem;">All</span>
         </button>
         <button class="tx-filter" data-owner-filter="all">
           <span style="font-size:0.6875rem;">Anyone</span>
+        </button>
+        <button class="tx-filter" data-category-filter="all">
+          <span style="font-size:0.6875rem;">All categories</span>
         </button>
       </div>
       <div id="tx-summary" class="tx-summary"></div>
@@ -4275,6 +4324,8 @@ function openSubscriptionForm(subscription = null, defaultKind = 'subscription')
 const Transactions = {
   filterType: 'all',     // 'all' | 'income' | 'expense' | 'transfer'
   filterOwner: 'all',    // 'all' | 'pv' | 'gigi' | 'shared'
+  filterCategory: 'all', // 'all' | category_id
+  searchTerm: '',        // free text search
 
   /** Returns true if this transaction is a transfer (internal or external) */
   isTransferTx(t) {
@@ -4305,35 +4356,69 @@ const Transactions = {
       txs = txs.filter(t => t.owner === this.filterOwner);
     }
 
+    // Category filter
+    if (this.filterCategory !== 'all') {
+      txs = txs.filter(t => t.category_id === this.filterCategory);
+    }
+
+    // Text search: matches description, category name, account/card name
+    const term = (this.searchTerm || '').trim().toLowerCase();
+    if (term) {
+      txs = txs.filter(t => {
+        const desc = (t.description || '').toLowerCase();
+        if (desc.includes(term)) return true;
+        const cat = State.categories.find(c => c.id === t.category_id);
+        if (cat && cat.name.toLowerCase().includes(term)) return true;
+        const acc = State.accounts.find(a => a.id === t.account_id);
+        if (acc && acc.name.toLowerCase().includes(term)) return true;
+        const card = State.cards.find(c => c.id === t.card_id);
+        if (card && card.name.toLowerCase().includes(term)) return true;
+        if (t.external_to && t.external_to.toLowerCase().includes(term)) return true;
+        // Match by amount (exact or rounded)
+        const amountStr = String(t.amount);
+        if (amountStr.includes(term)) return true;
+        return false;
+      });
+    }
+
     this.renderSummary(txs);
     this.renderList(txs);
   },
 
   renderSummary(txs) {
-    // Mês atual (do mais recente das transações filtradas, ou hoje)
-    const today = new Date();
-    const ym = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-    // Exclude transfers (internal + external) and card payments from income/expense totals
-    const monthTxs = txs.filter(t =>
-      (t.date || '').startsWith(ym) && !this.isTransferTx(t) && !t.is_payment
-    );
+    // When user is searching or filtering by category, show totals OF THE FILTER (all time)
+    // Otherwise show current month only
+    const isFiltered = (this.searchTerm || '').trim().length > 0 || this.filterCategory !== 'all';
+
+    let relevantTxs;
+    let label;
+    if (isFiltered) {
+      // All-time totals of what's filtered (excluding transfers and payments)
+      relevantTxs = txs.filter(t => !this.isTransferTx(t) && !t.is_payment);
+      label = `${relevantTxs.length} result${relevantTxs.length === 1 ? '' : 's'}`;
+    } else {
+      const today = new Date();
+      const ym = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+      relevantTxs = txs.filter(t =>
+        (t.date || '').startsWith(ym) && !this.isTransferTx(t) && !t.is_payment
+      );
+      label = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
 
     let income = 0, expense = 0;
-    monthTxs.forEach(t => {
+    relevantTxs.forEach(t => {
       const v = Number(t.amount) || 0;
       if (t.type === 'income') income += v;
       else expense += v;
     });
 
-    const monthLabel = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
     document.getElementById('tx-summary').innerHTML = `
       <div class="tx-summary-item">
-        <div class="tx-summary-label">Income · ${monthLabel}</div>
+        <div class="tx-summary-label">Income · ${label}</div>
         <div class="tx-summary-value text-success">+${App.formatCurrency(income)}</div>
       </div>
       <div class="tx-summary-item">
-        <div class="tx-summary-label">Expenses · ${monthLabel}</div>
+        <div class="tx-summary-label">Expenses · ${label}</div>
         <div class="tx-summary-value text-danger">-${App.formatCurrency(expense)}</div>
       </div>
     `;
@@ -6570,6 +6655,23 @@ document.getElementById('refresh-btn').addEventListener('click', () => {
   }, 300);
 });
 
+// Search input — filters Activity in real time
+const searchInput = document.getElementById('tx-search');
+const searchClear = document.getElementById('tx-search-clear');
+if (searchInput) {
+  searchInput.addEventListener('input', (e) => {
+    Transactions.searchTerm = e.target.value;
+    searchClear.style.display = e.target.value ? '' : 'none';
+    Transactions.render();
+  });
+  searchClear.addEventListener('click', () => {
+    searchInput.value = '';
+    Transactions.searchTerm = '';
+    searchClear.style.display = 'none';
+    Transactions.render();
+  });
+}
+
 const badge = document.getElementById('user-badge');
 let pressTimer;
 const startPress = () => {
@@ -6755,6 +6857,27 @@ document.addEventListener('click', (e) => {
     Transactions.filterOwner = next;
     ownerFilter.querySelector('span').textContent = labels[next];
     ownerFilter.classList.toggle('active', next !== 'all');
+    Transactions.render();
+    return;
+  }
+
+  // Category filter — cycles through ALL categories
+  const categoryFilter = e.target.closest('.tx-filter[data-category-filter]');
+  if (categoryFilter) {
+    const cats = State.categories;
+    // Build cycle: ['all', cat1.id, cat2.id, ...]
+    const cycle = ['all', ...cats.map(c => c.id)];
+    const current = Transactions.filterCategory;
+    const idx = cycle.indexOf(current);
+    const next = cycle[(idx + 1) % cycle.length];
+    Transactions.filterCategory = next;
+    let label = 'All categories';
+    if (next !== 'all') {
+      const cat = cats.find(c => c.id === next);
+      label = cat ? `${cat.icon || ''} ${cat.name}`.trim() : 'Unknown';
+    }
+    categoryFilter.querySelector('span').textContent = label;
+    categoryFilter.classList.toggle('active', next !== 'all');
     Transactions.render();
     return;
   }
