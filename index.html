@@ -1146,30 +1146,6 @@ h1, h2, h3 {
 .best-to-use-header {
   margin-bottom: var(--space-3);
 }
-.best-to-use-list.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-}
-.best-card.compact {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-md);
-  border-bottom: none;
-}
-.best-card.compact .best-medal {
-  width: auto;
-  font-size: 1rem;
-}
-.best-card.compact .best-name {
-  font-size: 0.8125rem;
-}
-.best-card.compact .best-main {
-  font-size: 0.6875rem;
-}
 .best-to-use-title {
   font-size: 0.6875rem;
   font-weight: 500;
@@ -1952,7 +1928,174 @@ h1, h2, h3 {
   font-size: 0.75rem;
 }
 
-/* ===== UPCOMING THIS MONTH ===== */
+/* ===== CALENDAR ===== */
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  gap: var(--space-2);
+}
+.cal-title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  text-transform: capitalize;
+}
+.cal-nav {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--duration);
+}
+.cal-nav:hover { background: var(--bg-tertiary); }
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.cal-weekday {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 0;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: var(--space-4);
+}
+.cal-cell {
+  aspect-ratio: 1;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  transition: all var(--duration);
+}
+.cal-cell.empty {
+  background: transparent;
+  border-color: transparent;
+}
+.cal-cell.has-events {
+  cursor: pointer;
+}
+.cal-cell.has-events:hover {
+  border-color: var(--border-default);
+  background: var(--bg-tertiary);
+}
+.cal-cell.today {
+  border-color: var(--text-primary);
+  border-width: 2px;
+}
+.cal-cell.past {
+  opacity: 0.55;
+}
+.cal-day-num {
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+.cal-cell.today .cal-day-num {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.cal-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+}
+.cal-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.cal-dot.due       { background: #f87171; }  /* red — card vencendo */
+.cal-dot.closing   { background: #a78bfa; }  /* purple — card fechando */
+.cal-dot.income    { background: #4ade80; }  /* green — receita */
+.cal-dot.subscription { background: #fbbf24; } /* yellow — sub no cartão */
+.cal-dot.expense   { background: #60a5fa; }  /* blue — recurring expense */
+.cal-more {
+  font-size: 0.5625rem;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  line-height: 1;
+}
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-2);
+}
+.cal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cal-summary {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* Day details modal */
+.cal-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.cal-event-row {
+  display: flex;
+  align-items: center;
+  padding: var(--space-3);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  gap: var(--space-2);
+}
+.cal-event-info {
+  flex: 1;
+  min-width: 0;
+}
+.cal-event-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.cal-event-type {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+.cal-event-amount {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
 .upcoming-card {
   margin-top: var(--space-4);
 }
@@ -2373,10 +2516,7 @@ html { scroll-behavior: smooth; }
       <div id="cards-page-content"></div>
     </section>
     <section class="page" id="page-calendar">
-      <div class="empty-state">
-        <div class="empty-state-title">Calendar</div>
-        <p class="empty-state-text">Coming in Stage 5 📅</p>
-      </div>
+      <div id="calendar-page-content"></div>
     </section>
   </main>
 
@@ -3363,6 +3503,7 @@ function showPage(name) {
     Cards.selectedCardId = null;
     Cards.render();
   }
+  if (name === 'calendar') Calendar.render();
 }
 
 function resetLoginUI() {
@@ -5602,6 +5743,230 @@ async function confirmRecurrence(subscriptionId) {
 /* ============================================
    CARDS PAGE — Lista de cartões + visualização de fatura
    ============================================ */
+/* ============================================
+ * CALENDAR — Monthly view with bills, payments, recurrences plotted
+ * ============================================ */
+const Calendar = {
+  // YYYY-MM string of the currently viewed month
+  currentMonth: null,
+
+  init() {
+    if (!this.currentMonth) {
+      const today = new Date();
+      this.currentMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+    }
+  },
+
+  render() {
+    this.init();
+    const container = document.getElementById('calendar-page-content');
+    if (!container) return;
+    container.innerHTML = this.renderMonth();
+    this.bindEvents();
+  },
+
+  /** Compute all events for the visible month */
+  computeEvents(year, month) {
+    // month: 0-indexed
+    // Returns: { 'YYYY-MM-DD': [{type, title, amount, color}, ...] }
+    const events = {};
+    const addEvent = (dateStr, ev) => {
+      if (!events[dateStr]) events[dateStr] = [];
+      events[dateStr].push(ev);
+    };
+
+    // 1. Card closings + due dates this month
+    State.cards.forEach(card => {
+      const closing = Number(card.closing_day);
+      const due = Number(card.due_day);
+      if (closing) {
+        const d = Math.min(closing, this.daysInMonth(year, month));
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        addEvent(dateStr, {
+          type: 'closing',
+          title: `${card.name} closes`,
+          color: 'closing',
+          ownerAvatar: card.owner,
+        });
+      }
+      if (due) {
+        const d = Math.min(due, this.daysInMonth(year, month));
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        // Try to find invoice total for that due date
+        // Find the invoice month whose due_day falls on this date
+        const invoiceMonth = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+        const charged = Invoice.getInvoiceTotal(card.id, invoiceMonth);
+        const paid = Invoice.getInvoicePaid(card.id, invoiceMonth);
+        const amount = Math.max(0, charged - paid);
+        addEvent(dateStr, {
+          type: 'due',
+          title: `${card.name} due`,
+          amount: amount > 0 ? amount : null,
+          color: 'due',
+          ownerAvatar: card.owner,
+        });
+      }
+    });
+
+    // 2. Subscriptions / Recurring (expense + income)
+    State.subscriptions.filter(s => s.is_active !== false).forEach(s => {
+      const day = Number(s.billing_day);
+      if (!day) return;
+      const d = Math.min(day, this.daysInMonth(year, month));
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const isIncome = s.type === 'income';
+      const isCardSub = !!s.card_id;
+      addEvent(dateStr, {
+        type: isIncome ? 'income' : (isCardSub ? 'subscription' : 'expense'),
+        title: s.name,
+        amount: Number(s.amount) || 0,
+        color: isIncome ? 'income' : (isCardSub ? 'subscription' : 'expense'),
+        ownerAvatar: s.owner,
+      });
+    });
+
+    return events;
+  },
+
+  daysInMonth(year, month) {
+    return new Date(year, month + 1, 0).getDate();
+  },
+
+  renderMonth() {
+    const [yearStr, monthStr] = this.currentMonth.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10) - 1; // 0-indexed
+
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+    const monthName = new Date(year, month, 1).toLocaleString(undefined, { month: 'long', year: 'numeric' });
+    const events = this.computeEvents(year, month);
+
+    // Build grid: 6 rows x 7 cols, starting from Sunday
+    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+    const daysInMonth = this.daysInMonth(year, month);
+    const weekdayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    let cellsHtml = '';
+    // Empty cells before first day
+    for (let i = 0; i < firstDay; i++) {
+      cellsHtml += `<div class="cal-cell empty"></div>`;
+    }
+    // Day cells
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayEvents = events[dateStr] || [];
+      const isToday = dateStr === todayStr;
+      const isPast = dateStr < todayStr;
+
+      // Up to 4 dots, then a "+N" badge
+      const visibleDots = dayEvents.slice(0, 4);
+      const moreCount = dayEvents.length - visibleDots.length;
+      const dotsHtml = visibleDots.map(e => `<span class="cal-dot ${e.color}"></span>`).join('');
+      const moreHtml = moreCount > 0 ? `<span class="cal-more">+${moreCount}</span>` : '';
+
+      cellsHtml += `
+        <div class="cal-cell ${isToday ? 'today' : ''} ${isPast ? 'past' : ''} ${dayEvents.length ? 'has-events' : ''}" data-cal-day="${dateStr}">
+          <div class="cal-day-num">${day}</div>
+          <div class="cal-dots">${dotsHtml}${moreHtml}</div>
+        </div>
+      `;
+    }
+
+    // Summary: count of events in the month
+    const totalEvents = Object.values(events).reduce((sum, arr) => sum + arr.length, 0);
+
+    return `
+      <div class="cal-header">
+        <button class="cal-nav" data-cal-prev>‹</button>
+        <span class="cal-title">${monthName}</span>
+        <button class="cal-nav" data-cal-next>›</button>
+      </div>
+
+      <div class="cal-weekdays">
+        ${weekdayHeaders.map(w => `<div class="cal-weekday">${w}</div>`).join('')}
+      </div>
+
+      <div class="cal-grid">${cellsHtml}</div>
+
+      <div class="cal-legend">
+        <div class="cal-legend-item"><span class="cal-dot due"></span> Due</div>
+        <div class="cal-legend-item"><span class="cal-dot closing"></span> Closes</div>
+        <div class="cal-legend-item"><span class="cal-dot income"></span> Income</div>
+        <div class="cal-legend-item"><span class="cal-dot subscription"></span> Sub</div>
+        <div class="cal-legend-item"><span class="cal-dot expense"></span> Bill</div>
+      </div>
+
+      <div class="cal-summary">${totalEvents} event${totalEvents === 1 ? '' : 's'} this month</div>
+    `;
+  },
+
+  bindEvents() {
+    document.querySelector('[data-cal-prev]')?.addEventListener('click', () => this.navigate(-1));
+    document.querySelector('[data-cal-next]')?.addEventListener('click', () => this.navigate(1));
+    document.querySelectorAll('[data-cal-day]').forEach(el => {
+      el.addEventListener('click', () => {
+        if (!el.classList.contains('has-events')) return;
+        this.openDayDetails(el.dataset.calDay);
+      });
+    });
+  },
+
+  navigate(direction) {
+    const [year, month] = this.currentMonth.split('-').map(n => parseInt(n, 10));
+    const d = new Date(year, month - 1 + direction, 1);
+    this.currentMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    this.render();
+  },
+
+  openDayDetails(dateStr) {
+    const [year, month, day] = dateStr.split('-').map(n => parseInt(n, 10));
+    const events = this.computeEvents(year, month - 1)[dateStr] || [];
+    if (!events.length) return;
+
+    const dateObj = new Date(year, month - 1, day);
+    const dateTitle = dateObj.toLocaleDateString(undefined, {
+      weekday: 'long', month: 'long', day: 'numeric',
+    });
+
+    const colorLabels = {
+      due: 'Card due',
+      closing: 'Card closing',
+      income: 'Recurring income',
+      subscription: 'Subscription',
+      expense: 'Recurring bill',
+    };
+
+    const eventsHtml = events.map(e => {
+      const ownerAvatar = e.ownerAvatar
+        ? `<span class="inline-avatar ${e.ownerAvatar}" style="width:14px;height:14px;font-size:0.5625rem;">${e.ownerAvatar === 'pv' ? 'P' : e.ownerAvatar === 'gigi' ? 'G' : 'S'}</span>`
+        : '';
+      const amountHtml = e.amount != null
+        ? `<span class="cal-event-amount">${App.formatCurrency(e.amount)}</span>`
+        : '';
+      return `
+        <div class="cal-event-row">
+          <span class="cal-dot ${e.color}" style="margin-right:8px;"></span>
+          <div class="cal-event-info">
+            <div class="cal-event-title">${escapeHtml(e.title)} ${ownerAvatar}</div>
+            <div class="cal-event-type">${colorLabels[e.color] || e.color}</div>
+          </div>
+          ${amountHtml}
+        </div>
+      `;
+    }).join('');
+
+    Modal.open(dateTitle, `
+      <div class="cal-event-list">${eventsHtml}</div>
+      <div style="margin-top: var(--space-5);">
+        <button class="btn btn-primary" onclick="Modal.close()">Close</button>
+      </div>
+    `);
+  },
+};
+
+
 const Cards = {
   // Estado da página: 'list' = lista de cartões, 'detail' = fatura de 1 cartão
   view: 'list',
@@ -5673,15 +6038,16 @@ const Cards = {
       return bDays - aDays; // descending — more days = better
     });
 
-    const medals = ['🥇', '🥈', '🥉', '4️⃣'];
-    const useGrid = rankings.length >= 2 && rankings.length <= 4;
-    const bestToUseHtml = rankings.length > 1 ? `
+    // Show only top 3 in a clean vertical list
+    const top3 = rankings.slice(0, 3);
+    const medals = ['🥇', '🥈', '🥉'];
+    const bestToUseHtml = top3.length > 1 ? `
       <div class="best-to-use-section">
         <div class="best-to-use-header">
           <span class="best-to-use-title">Best to use today</span>
         </div>
-        <div class="best-to-use-list ${useGrid ? 'grid' : ''}">
-          ${rankings.map((r, idx) => this.renderBestCard(r, medals[idx] || '•', useGrid)).join('')}
+        <div class="best-to-use-list">
+          ${top3.map((r, idx) => this.renderBestCard(r, medals[idx])).join('')}
         </div>
       </div>
     ` : '';
@@ -5735,7 +6101,7 @@ const Cards = {
   },
 
   /** Render single card in "Best to use today" ranking */
-  renderBestCard(r, medal, compact = false) {
+  renderBestCard(r, medal) {
     const card = r.card;
     const dueDateStr = this.formatShortDate(r.dueDate);
     let mainLine;
@@ -5743,32 +6109,26 @@ const Cards = {
     let stateIcon = '';
 
     if (r.hasNoCredit) {
-      mainLine = compact ? 'No credit' : `<span class="best-no-credit">No credit available</span>`;
+      mainLine = `<span class="best-no-credit">No credit available</span>`;
       stateClass = 'no-credit';
     } else if (r.state === 'ambiguous') {
       const { min, max, earlyDue, lateDue } = r.ambiguousRange;
       const earlyStr = this.formatShortDate(earlyDue);
       const lateStr = this.formatShortDate(lateDue);
-      mainLine = compact
-        ? `${min}–${max} days`
-        : `${min}–${max} days · pay ${earlyStr} or ${lateStr}`;
+      mainLine = `${min}–${max} days · pay ${earlyStr} or ${lateStr}`;
       stateClass = 'ambiguous';
-      stateIcon = compact
-        ? '<span class="best-warn">⚠️ closing</span>'
-        : '<span class="best-warn">⚠️ Closing window</span>';
+      stateIcon = '<span class="best-warn">⚠️ Closing window</span>';
     } else if (r.state === 'just-closed') {
-      mainLine = compact ? `${r.daysToDue} days` : `${r.daysToDue} days · pay ${dueDateStr}`;
+      mainLine = `${r.daysToDue} days · pay ${dueDateStr}`;
       stateClass = 'just-closed';
-      stateIcon = compact
-        ? '<span class="best-fresh">just closed</span>'
-        : '<span class="best-fresh">Just closed — full cycle</span>';
+      stateIcon = '<span class="best-fresh">Just closed — full cycle</span>';
     } else {
-      mainLine = compact ? `${r.daysToDue} days` : `${r.daysToDue} days · pay ${dueDateStr}`;
+      mainLine = `${r.daysToDue} days · pay ${dueDateStr}`;
       stateClass = 'safe';
     }
 
     return `
-      <div class="best-card ${stateClass} ${compact ? 'compact' : ''}" data-open-card="${card.id}">
+      <div class="best-card ${stateClass}" data-open-card="${card.id}">
         <span class="best-medal">${medal}</span>
         <div class="best-info">
           <div class="best-name">${escapeHtml(card.name)} <span class="inline-avatar ${card.owner}" style="width:14px;height:14px;font-size:0.5625rem;">${card.owner === 'pv' ? 'P' : 'G'}</span></div>
