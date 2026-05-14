@@ -1146,6 +1146,30 @@ h1, h2, h3 {
 .best-to-use-header {
   margin-bottom: var(--space-3);
 }
+.best-to-use-list.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+.best-card.compact {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  border-bottom: none;
+}
+.best-card.compact .best-medal {
+  width: auto;
+  font-size: 1rem;
+}
+.best-card.compact .best-name {
+  font-size: 0.8125rem;
+}
+.best-card.compact .best-main {
+  font-size: 0.6875rem;
+}
 .best-to-use-title {
   font-size: 0.6875rem;
   font-weight: 500;
@@ -3603,6 +3627,18 @@ function ownerToggleHtml(currentOwner = null) {
   `;
 }
 
+/** Label for an account in a <select>: "Sofi (PV)" — adds owner for clarity since selects have no color */
+function accountOptionLabel(a) {
+  const ownerName = a.owner === 'pv' ? 'PV' : a.owner === 'gigi' ? 'Gigi' : '';
+  return ownerName ? `${a.name} (${ownerName})` : a.name;
+}
+
+/** Label for a card in a <select>: "Apple Card (PV)" */
+function cardOptionLabel(c) {
+  const ownerName = c.owner === 'pv' ? 'PV' : c.owner === 'gigi' ? 'Gigi' : '';
+  return ownerName ? `${c.name} (${ownerName})` : c.name;
+}
+
 function bindOwnerToggle() {
   const toggle = document.getElementById('owner-toggle');
   if (!toggle) return;
@@ -3686,7 +3722,7 @@ function openCategoryForm(category = null, defaultType = 'expense') {
 
   if (isEdit) {
     document.getElementById('cat-delete').addEventListener('click', async () => {
-      if (!confirm(`Delete "${c.name}"?`)) return;
+      if (!confirm(`Delete "${c.name}"? This cannot be undone.`)) return;
       try {
         await Data.deleteCategory(category.id);
         toast('Category deleted');
@@ -3765,7 +3801,7 @@ function openAccountForm(account = null) {
 
   if (isEdit) {
     document.getElementById('acc-delete').addEventListener('click', async () => {
-      if (!confirm(`Delete "${a.name}"?`)) return;
+      if (!confirm(`Delete "${a.name}"? This cannot be undone. Existing transactions will lose their account reference.`)) return;
       try {
         await Data.deleteAccount(account.id);
         toast('Account deleted');
@@ -3788,7 +3824,7 @@ function openCardForm(card = null) {
   };
 
   const accountOptions = State.accounts.map(a =>
-    `<option value="${a.id}" ${a.id === c.account_id ? 'selected' : ''}>${escapeHtml(a.name)}</option>`
+    `<option value="${a.id}" ${a.id === c.account_id ? 'selected' : ''}>${escapeHtml(accountOptionLabel(a))}</option>`
   ).join('');
 
   Modal.open(isEdit ? 'Edit card' : 'New card', `
@@ -3890,7 +3926,7 @@ function openCardForm(card = null) {
 
   if (isEdit) {
     document.getElementById('card-delete').addEventListener('click', async () => {
-      if (!confirm(`Delete "${c.name}"? Existing transactions will become orphaned.`)) return;
+      if (!confirm(`Delete "${c.name}"? This cannot be undone. Existing transactions will lose their card reference.`)) return;
       try {
         await Data.deleteCard(card.id);
         toast('Card deleted');
@@ -3937,11 +3973,11 @@ function openSubscriptionForm(subscription = null, defaultKind = 'subscription')
   let selectedType = kindType;
 
   const accountOptions = State.accounts.map(a =>
-    `<option value="${a.id}" ${a.id === selectedAccountId ? 'selected' : ''}>${escapeHtml(a.name)}</option>`
+    `<option value="${a.id}" ${a.id === selectedAccountId ? 'selected' : ''}>${escapeHtml(accountOptionLabel(a))}</option>`
   ).join('');
 
   const cardOptions = State.cards.map(c =>
-    `<option value="${c.id}" ${c.id === selectedCardId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+    `<option value="${c.id}" ${c.id === selectedCardId ? 'selected' : ''}>${escapeHtml(cardOptionLabel(c))}</option>`
   ).join('');
 
   const kindLabels = {
@@ -4025,6 +4061,19 @@ function openSubscriptionForm(subscription = null, defaultKind = 'subscription')
     if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
     if (!billing_day || billing_day < 1 || billing_day > 31) return toast('Invalid billing day', 'error');
 
+    // Warn about duplicate names (only on create or rename)
+    const lowerName = name.toLowerCase();
+    const duplicate = State.subscriptions.find(s =>
+      s.id !== subscription?.id && (s.name || '').toLowerCase() === lowerName
+    );
+    if (duplicate) {
+      const kind = duplicate.type === 'income' ? 'recurring income'
+        : duplicate.card_id ? 'subscription'
+        : 'recurring expense';
+      const ok = confirm(`There's already a ${kind} named "${duplicate.name}". Create another with the same name anyway?`);
+      if (!ok) return;
+    }
+
     let account_id = null, card_id = null;
     if (selectedType === 'income') {
       account_id = document.getElementById('sub-account').value || null;
@@ -4065,7 +4114,7 @@ function openSubscriptionForm(subscription = null, defaultKind = 'subscription')
 
   if (isEdit) {
     document.getElementById('sub-delete').addEventListener('click', async () => {
-      if (!confirm(`Delete "${s.name}"?`)) return;
+      if (!confirm(`Delete "${s.name}"? This cannot be undone.`)) return;
       try {
         await Data.deleteSubscription(subscription.id);
         toast('Deleted');
@@ -5010,7 +5059,7 @@ function openTransactionForm(transaction = null) {
         }
         return;
       }
-      if (!confirm('Delete this transaction?')) return;
+      if (!confirm('Delete this transaction? This cannot be undone.')) return;
       try {
         await Data.deleteTransaction(transaction.id);
         toast('Transaction deleted');
@@ -5328,7 +5377,7 @@ function openTransferForm(opts = null) {
 
   if (isEdit) {
     document.getElementById('tr-delete').addEventListener('click', async () => {
-      if (!confirm('Delete this transfer?')) return;
+      if (!confirm('Delete this transfer? This cannot be undone.')) return;
       try {
         if (editingExternalTx) {
           await Data.deleteTransaction(editingExternalTx.id);
@@ -5624,13 +5673,16 @@ const Cards = {
       return bDays - aDays; // descending — more days = better
     });
 
-    const medals = ['🥇', '🥈', '🥉'];
+    const medals = ['🥇', '🥈', '🥉', '4️⃣'];
+    const useGrid = rankings.length >= 2 && rankings.length <= 4;
     const bestToUseHtml = rankings.length > 1 ? `
       <div class="best-to-use-section">
         <div class="best-to-use-header">
           <span class="best-to-use-title">Best to use today</span>
         </div>
-        ${rankings.map((r, idx) => this.renderBestCard(r, medals[idx] || '•')).join('')}
+        <div class="best-to-use-list ${useGrid ? 'grid' : ''}">
+          ${rankings.map((r, idx) => this.renderBestCard(r, medals[idx] || '•', useGrid)).join('')}
+        </div>
       </div>
     ` : '';
 
@@ -5683,7 +5735,7 @@ const Cards = {
   },
 
   /** Render single card in "Best to use today" ranking */
-  renderBestCard(r, medal) {
+  renderBestCard(r, medal, compact = false) {
     const card = r.card;
     const dueDateStr = this.formatShortDate(r.dueDate);
     let mainLine;
@@ -5691,26 +5743,32 @@ const Cards = {
     let stateIcon = '';
 
     if (r.hasNoCredit) {
-      mainLine = `<span class="best-no-credit">No credit available</span>`;
+      mainLine = compact ? 'No credit' : `<span class="best-no-credit">No credit available</span>`;
       stateClass = 'no-credit';
     } else if (r.state === 'ambiguous') {
       const { min, max, earlyDue, lateDue } = r.ambiguousRange;
       const earlyStr = this.formatShortDate(earlyDue);
       const lateStr = this.formatShortDate(lateDue);
-      mainLine = `${min}–${max} days · pay ${earlyStr} or ${lateStr}`;
+      mainLine = compact
+        ? `${min}–${max} days`
+        : `${min}–${max} days · pay ${earlyStr} or ${lateStr}`;
       stateClass = 'ambiguous';
-      stateIcon = '<span class="best-warn">⚠️ Closing window</span>';
+      stateIcon = compact
+        ? '<span class="best-warn">⚠️ closing</span>'
+        : '<span class="best-warn">⚠️ Closing window</span>';
     } else if (r.state === 'just-closed') {
-      mainLine = `${r.daysToDue} days · pay ${dueDateStr}`;
+      mainLine = compact ? `${r.daysToDue} days` : `${r.daysToDue} days · pay ${dueDateStr}`;
       stateClass = 'just-closed';
-      stateIcon = '<span class="best-fresh">Just closed — full cycle</span>';
+      stateIcon = compact
+        ? '<span class="best-fresh">just closed</span>'
+        : '<span class="best-fresh">Just closed — full cycle</span>';
     } else {
-      mainLine = `${r.daysToDue} days · pay ${dueDateStr}`;
+      mainLine = compact ? `${r.daysToDue} days` : `${r.daysToDue} days · pay ${dueDateStr}`;
       stateClass = 'safe';
     }
 
     return `
-      <div class="best-card ${stateClass}" data-open-card="${card.id}">
+      <div class="best-card ${stateClass} ${compact ? 'compact' : ''}" data-open-card="${card.id}">
         <span class="best-medal">${medal}</span>
         <div class="best-info">
           <div class="best-name">${escapeHtml(card.name)} <span class="inline-avatar ${card.owner}" style="width:14px;height:14px;font-size:0.5625rem;">${card.owner === 'pv' ? 'P' : 'G'}</span></div>
