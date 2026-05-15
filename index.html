@@ -2617,7 +2617,7 @@ html { scroll-behavior: smooth; }
             Clear
           </button>
         </div>
-        <div class="section-hint">Last 50 actions made in the app (stored on this device only).</div>
+        <div class="section-hint">Last 15 actions made in the app, synced across all devices.</div>
         <div id="history-list" class="item-list"></div>
       </div>
 
@@ -2894,69 +2894,79 @@ const FALLBACK_USERS = {
 };
 
 /* ============================================
- * ACTIVITY LOG — last 50 actions, localStorage only (per device)
+ * ACTIVITY LOG — synced across devices via Supabase
+ * Shows last 15 actions to all users
  * ============================================ */
 const ActivityLog = {
-  KEY: 'finance_activity_log_v1',
-  MAX: 50,
-
-  read() {
-    try {
-      return JSON.parse(localStorage.getItem(this.KEY)) || [];
-    } catch {
-      return [];
-    }
-  },
-
-  write(entries) {
-    try {
-      localStorage.setItem(this.KEY, JSON.stringify(entries.slice(0, this.MAX)));
-    } catch (e) {
-      // localStorage full or unavailable — silently ignore
-    }
-  },
+  MAX_DISPLAY: 15,
 
   /**
-   * Record an action.
+   * Record an action — fires-and-forgets to Supabase (non-blocking).
    * action: 'create' | 'update' | 'delete'
-   * entity: 'transaction' | 'transfer' | 'account' | 'card' | 'category' | 'subscription' | 'payment'
+   * entity: 'transaction' | 'transfer' | 'account' | 'card' | 'category' | 'recurring' | 'payment'
    * description: short human label, e.g. "Coffee · $5.50"
    */
   record(action, entity, description) {
+    if (!db) return;
     const entry = {
       action,
       entity,
       description: description || '—',
-      user: Auth.getSession()?.userId || 'unknown',
-      timestamp: new Date().toISOString(),
+      user_id: Auth.getSession()?.userId || 'unknown',
     };
-    const entries = this.read();
-    entries.unshift(entry);
-    this.write(entries);
+    // Fire-and-forget — don't await, don't block UI
+    db.from('activity_log').insert([entry]).then(({ error }) => {
+      if (error) console.warn('ActivityLog write failed:', error.message);
+    });
   },
 
-  clear() {
-    try { localStorage.removeItem(this.KEY); } catch {}
+  async fetch() {
+    if (!db) return [];
+    const { data, error } = await db.from('activity_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(this.MAX_DISPLAY);
+    if (error) {
+      console.warn('ActivityLog fetch failed:', error.message);
+      return [];
+    }
+    return data || [];
   },
 
-  render() {
+  async clear() {
+    if (!db) return;
+    // Delete all rows
+    const { error } = await db.from('activity_log').delete().neq('id', 0);
+    if (error) {
+      toast('Could not clear history: ' + error.message, 'error');
+      return false;
+    }
+    return true;
+  },
+
+  async render() {
     const container = document.getElementById('history-list');
     if (!container) return;
-    const entries = this.read();
+
+    container.innerHTML = `<div class="empty-state-text" style="text-align:center;padding:var(--space-4);">Loading…</div>`;
+
+    const entries = await this.fetch();
+
     if (!entries.length) {
       container.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-title">No activity yet</div>
-          <p class="empty-state-text">Actions you take in the app will show up here.</p>
+          <p class="empty-state-text">Actions taken in the app will appear here, synced across all devices.</p>
         </div>
       `;
       return;
     }
+
     const actionIcons = { create: '+', update: '✎', delete: '×' };
     const actionLabels = { create: 'Created', update: 'Updated', delete: 'Deleted' };
     container.innerHTML = entries.map(e => {
-      const userClass = e.user === 'pv' ? 'pv' : e.user === 'gigi' ? 'gigi' : 'shared';
-      const userLetter = e.user === 'pv' ? 'P' : e.user === 'gigi' ? 'G' : '?';
+      const userClass = e.user_id === 'pv' ? 'pv' : e.user_id === 'gigi' ? 'gigi' : 'shared';
+      const userLetter = e.user_id === 'pv' ? 'P' : e.user_id === 'gigi' ? 'G' : '?';
       return `
         <div class="history-row">
           <div class="history-icon history-${e.action}">${actionIcons[e.action] || '·'}</div>
@@ -2964,11 +2974,11 @@ const ActivityLog = {
             <div class="history-text">
               <strong>${actionLabels[e.action] || e.action}</strong>
               <span class="history-entity">${escapeHtml(e.entity)}</span>
-              <span class="history-desc">${escapeHtml(e.description)}</span>
+              <span class="history-desc">${escapeHtml(e.description || '')}</span>
             </div>
             <div class="history-meta">
               <span class="inline-avatar ${userClass}" style="width:12px;height:12px;font-size:0.5rem;">${userLetter}</span>
-              ${App.formatTimestamp(e.timestamp)}
+              ${App.formatTimestamp(e.created_at)}
             </div>
           </div>
         </div>
@@ -6664,25 +6674,26 @@ const Dashboard = {
     const viewMode = localStorage.getItem('dashHeroMode') || 'balance';
 
     if (viewMode === 'spending') {
-      // Show today's spending (net = expenses - income today, excluding transfers/payments)
+      // Show today's spending: only expenses + external transfers (money leaving)
+      // Ignore income and internal transfers (which net to zero anyway)
       const todayStr = new Date().toISOString().split('T')[0];
-      let todayExpense = 0;
-      let todayIncome = 0;
+      let todaySpending = 0;
       State.transactions.forEach(t => {
         if (t.date !== todayStr) return;
-        if (this.isTransferTx ? this.isTransferTx(t) : (t.is_transfer || t.external_to)) return;
+        // Skip internal transfers (PV ↔ Gigi) — money doesn't leave
+        if (t.is_transfer) return;
+        // Skip card payments — already counted when card purchase was made
         if (t.is_payment) return;
-        const v = Number(t.amount) || 0;
-        if (t.type === 'income') todayIncome += v;
-        else todayExpense += v;
+        // Skip income
+        if (t.type === 'income') return;
+        // Count: regular expenses AND external transfers (Pix to someone else)
+        todaySpending += Number(t.amount) || 0;
       });
-      const net = todayExpense - todayIncome;
       document.getElementById('dash-today-label').textContent = "Today's spending";
       const valEl = document.getElementById('dash-today-value');
-      valEl.textContent = (net >= 0 ? '-' : '+') + App.formatCurrency(Math.abs(net));
+      valEl.textContent = '-' + App.formatCurrency(todaySpending);
       valEl.classList.remove('text-success', 'text-danger');
-      if (net > 0) valEl.classList.add('text-danger');
-      else if (net < 0) valEl.classList.add('text-success');
+      if (todaySpending > 0) valEl.classList.add('text-danger');
       // Hide the PV/Gigi split (irrelevant in spending mode)
       const split = document.getElementById('dash-today-split');
       if (split) split.style.display = 'none';
@@ -7064,11 +7075,13 @@ document.querySelectorAll('.tab').forEach(tab => {
 // History "Clear" button
 const historyClearBtn = document.getElementById('history-clear');
 if (historyClearBtn) {
-  historyClearBtn.addEventListener('click', () => {
-    if (!confirm('Clear all activity history? This cannot be undone.')) return;
-    ActivityLog.clear();
-    ActivityLog.render();
-    toast('History cleared');
+  historyClearBtn.addEventListener('click', async () => {
+    if (!confirm('Clear all activity history? This will delete the log for everyone, and cannot be undone.')) return;
+    const ok = await ActivityLog.clear();
+    if (ok) {
+      await ActivityLog.render();
+      toast('History cleared');
+    }
   });
 }
 
