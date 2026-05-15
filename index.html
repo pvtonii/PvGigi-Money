@@ -915,7 +915,61 @@ h1, h2, h3 {
   line-height: 1.5;
 }
 
-/* Audit info: created_at + updated_at in More options (read-only) */
+/* History (activity log) */
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+}
+.history-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+.history-icon.history-create { background: rgba(34,197,94,0.15); color: var(--success); }
+.history-icon.history-update { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.history-icon.history-delete { background: rgba(239,68,68,0.15); color: var(--danger); }
+.history-info {
+  flex: 1;
+  min-width: 0;
+}
+.history-text {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: baseline;
+}
+.history-entity {
+  color: var(--text-tertiary);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.history-desc {
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+.history-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  font-family: var(--font-mono);
+}
 .audit-info {
   background: var(--bg-tertiary);
   border-radius: var(--radius-md);
@@ -1134,6 +1188,33 @@ h1, h2, h3 {
 }
 .tx-filters::-webkit-scrollbar,
 .cards-filters::-webkit-scrollbar { display: none; }
+
+/* Category dropdown styled like a chip */
+.tx-filter-select {
+  padding: var(--space-2) var(--space-3);
+  padding-right: 24px;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2399A1AF' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+  max-width: 140px;
+  text-overflow: ellipsis;
+}
+.tx-filter-select.active {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+  font-weight: 600;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>");
+}
 
 /* Search bar for Activity */
 .tx-search-wrap {
@@ -1785,6 +1866,30 @@ h1, h2, h3 {
   word-break: break-all;
   line-height: 1.1;
 }
+
+/* Top row of hero with toggle button */
+.dash-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.dash-hero-toggle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration);
+}
+.dash-hero-toggle:hover {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
 .dash-hero-split {
   display: flex;
   gap: var(--space-4);
@@ -2362,11 +2467,14 @@ html { scroll-behavior: smooth; }
 
     <!-- DASHBOARD -->
     <section class="page active" id="page-dashboard">
-      <!-- Hero card: Today's balance (largura completa) -->
+      <!-- Hero card: Today's balance OR Today's spending (largura completa) -->
       <div class="dash-hero fade-in" id="dash-today">
-        <div class="dash-card-label">Today's balance</div>
+        <div class="dash-hero-top">
+          <div class="dash-card-label" id="dash-today-label">Today's balance</div>
+          <button class="dash-hero-toggle" id="dash-today-toggle" title="Switch view">⇄</button>
+        </div>
         <div class="dash-hero-value text-mono" id="dash-today-value">$0.00</div>
-        <div class="dash-hero-split">
+        <div class="dash-hero-split" id="dash-today-split">
           <div class="dash-hero-split-item">
             <div class="user-avatar pv" style="width:18px;height:18px;font-size:0.5625rem;">P</div>
             <span class="dash-hero-split-label">PV</span>
@@ -2423,6 +2531,7 @@ html { scroll-behavior: smooth; }
         <button class="tab" data-tab="accounts">Accounts</button>
         <button class="tab" data-tab="cards-config">Cards</button>
         <button class="tab" data-tab="recurring">Recurring</button>
+        <button class="tab" data-tab="history">History</button>
         <button class="tab" data-tab="connection">Connection</button>
       </div>
 
@@ -2500,6 +2609,18 @@ html { scroll-behavior: smooth; }
         <div class="item-list" id="list-recurring-income"></div>
       </div>
 
+      <div class="tab-content hidden" id="tab-history">
+        <div class="section-header">
+          <span class="section-title">Recent activity</span>
+          <button class="section-add" id="history-clear" style="background:transparent;">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Clear
+          </button>
+        </div>
+        <div class="section-hint">Last 50 actions made in the app (stored on this device only).</div>
+        <div id="history-list" class="item-list"></div>
+      </div>
+
       <div class="tab-content hidden" id="tab-connection">
         <div class="section-header">
           <span class="section-title">Status</span>
@@ -2554,9 +2675,9 @@ html { scroll-behavior: smooth; }
         <button class="tx-filter" data-owner-filter="all">
           <span style="font-size:0.6875rem;">Anyone</span>
         </button>
-        <button class="tx-filter" data-category-filter="all">
-          <span style="font-size:0.6875rem;">All categories</span>
-        </button>
+        <select class="tx-filter tx-filter-select" id="tx-category-filter">
+          <option value="all">All categories</option>
+        </select>
       </div>
       <div id="tx-summary" class="tx-summary"></div>
       <div id="tx-list"></div>
@@ -2772,6 +2893,90 @@ const FALLBACK_USERS = {
   gigi: { id: 'gigi', name: 'Gigi', pin: '5678', color: 'gigi' },
 };
 
+/* ============================================
+ * ACTIVITY LOG — last 50 actions, localStorage only (per device)
+ * ============================================ */
+const ActivityLog = {
+  KEY: 'finance_activity_log_v1',
+  MAX: 50,
+
+  read() {
+    try {
+      return JSON.parse(localStorage.getItem(this.KEY)) || [];
+    } catch {
+      return [];
+    }
+  },
+
+  write(entries) {
+    try {
+      localStorage.setItem(this.KEY, JSON.stringify(entries.slice(0, this.MAX)));
+    } catch (e) {
+      // localStorage full or unavailable — silently ignore
+    }
+  },
+
+  /**
+   * Record an action.
+   * action: 'create' | 'update' | 'delete'
+   * entity: 'transaction' | 'transfer' | 'account' | 'card' | 'category' | 'subscription' | 'payment'
+   * description: short human label, e.g. "Coffee · $5.50"
+   */
+  record(action, entity, description) {
+    const entry = {
+      action,
+      entity,
+      description: description || '—',
+      user: Auth.getSession()?.userId || 'unknown',
+      timestamp: new Date().toISOString(),
+    };
+    const entries = this.read();
+    entries.unshift(entry);
+    this.write(entries);
+  },
+
+  clear() {
+    try { localStorage.removeItem(this.KEY); } catch {}
+  },
+
+  render() {
+    const container = document.getElementById('history-list');
+    if (!container) return;
+    const entries = this.read();
+    if (!entries.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-title">No activity yet</div>
+          <p class="empty-state-text">Actions you take in the app will show up here.</p>
+        </div>
+      `;
+      return;
+    }
+    const actionIcons = { create: '+', update: '✎', delete: '×' };
+    const actionLabels = { create: 'Created', update: 'Updated', delete: 'Deleted' };
+    container.innerHTML = entries.map(e => {
+      const userClass = e.user === 'pv' ? 'pv' : e.user === 'gigi' ? 'gigi' : 'shared';
+      const userLetter = e.user === 'pv' ? 'P' : e.user === 'gigi' ? 'G' : '?';
+      return `
+        <div class="history-row">
+          <div class="history-icon history-${e.action}">${actionIcons[e.action] || '·'}</div>
+          <div class="history-info">
+            <div class="history-text">
+              <strong>${actionLabels[e.action] || e.action}</strong>
+              <span class="history-entity">${escapeHtml(e.entity)}</span>
+              <span class="history-desc">${escapeHtml(e.description)}</span>
+            </div>
+            <div class="history-meta">
+              <span class="inline-avatar ${userClass}" style="width:12px;height:12px;font-size:0.5rem;">${userLetter}</span>
+              ${App.formatTimestamp(e.timestamp)}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+};
+
 const Auth = {
   setSession(user) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -2847,6 +3052,7 @@ const Data = {
     if (error) { Status.set('disconnected', 'Save failed'); throw error; }
     State.categories.push(row);
     Status.set('connected', `${State.categories.length} categorias · ${State.accounts.length} contas`);
+    ActivityLog.record('create', 'category', row.name);
     return row;
   },
   async updateCategory(id, data) {
@@ -2857,15 +3063,18 @@ const Data = {
     const idx = State.categories.findIndex(c => c.id === id);
     if (idx >= 0) State.categories[idx] = row;
     Status.set('connected', `${State.categories.length} categorias · ${State.accounts.length} contas`);
+    ActivityLog.record('update', 'category', row.name);
     return row;
   },
   async deleteCategory(id) {
     if (!db) throw new Error('Supabase not configured');
+    const cat = State.categories.find(c => c.id === id);
     Status.set('syncing', 'Deleting…');
     const { error } = await db.from('categories').delete().eq('id', id);
     if (error) { Status.set('disconnected', 'Delete failed'); throw error; }
     State.categories = State.categories.filter(c => c.id !== id);
     Status.set('connected', `${State.categories.length} categorias · ${State.accounts.length} contas`);
+    if (cat) ActivityLog.record('delete', 'category', cat.name);
   },
 
   async createAccount(data) {
@@ -2875,6 +3084,7 @@ const Data = {
     if (error) { Status.set('disconnected', 'Save failed'); throw error; }
     State.accounts.push(row);
     Status.set('connected', `${State.categories.length} categorias · ${State.accounts.length} contas`);
+    ActivityLog.record('create', 'account', row.name);
     return row;
   },
   async updateAccount(id, data) {
@@ -2885,15 +3095,18 @@ const Data = {
     const idx = State.accounts.findIndex(a => a.id === id);
     if (idx >= 0) State.accounts[idx] = row;
     Status.set('connected', `${State.categories.length} categorias · ${State.accounts.length} contas`);
+    ActivityLog.record('update', 'account', row.name);
     return row;
   },
   async deleteAccount(id) {
     if (!db) throw new Error('Supabase not configured');
+    const acc = State.accounts.find(a => a.id === id);
     Status.set('syncing', 'Deleting…');
     const { error } = await db.from('accounts').delete().eq('id', id);
     if (error) { Status.set('disconnected', 'Delete failed'); throw error; }
     State.accounts = State.accounts.filter(a => a.id !== id);
     this._setReady();
+    if (acc) ActivityLog.record('delete', 'account', acc.name);
   },
 
   // Helper: status "connected" com contadores atualizados
@@ -2909,6 +3122,7 @@ const Data = {
     if (error) { Status.set('disconnected', 'Save failed'); throw error; }
     State.cards.push(row);
     this._setReady();
+    ActivityLog.record('create', 'card', row.name);
     return row;
   },
   async updateCard(id, data) {
@@ -2919,15 +3133,18 @@ const Data = {
     const idx = State.cards.findIndex(c => c.id === id);
     if (idx >= 0) State.cards[idx] = row;
     this._setReady();
+    ActivityLog.record('update', 'card', row.name);
     return row;
   },
   async deleteCard(id) {
     if (!db) throw new Error('Supabase not configured');
+    const card = State.cards.find(c => c.id === id);
     Status.set('syncing', 'Deleting…');
     const { error } = await db.from('cards').delete().eq('id', id);
     if (error) { Status.set('disconnected', 'Delete failed'); throw error; }
     State.cards = State.cards.filter(c => c.id !== id);
     this._setReady();
+    if (card) ActivityLog.record('delete', 'card', card.name);
   },
 
   // Subscriptions / Recurring
@@ -2938,6 +3155,7 @@ const Data = {
     if (error) { Status.set('disconnected', 'Save failed'); throw error; }
     State.subscriptions.push(row);
     this._setReady();
+    ActivityLog.record('create', 'recurring', `${row.name} · ${App.formatCurrency(row.amount)}`);
     return row;
   },
   async updateSubscription(id, data) {
@@ -2948,15 +3166,18 @@ const Data = {
     const idx = State.subscriptions.findIndex(s => s.id === id);
     if (idx >= 0) State.subscriptions[idx] = row;
     this._setReady();
+    ActivityLog.record('update', 'recurring', `${row.name} · ${App.formatCurrency(row.amount)}`);
     return row;
   },
   async deleteSubscription(id) {
     if (!db) throw new Error('Supabase not configured');
+    const sub = State.subscriptions.find(s => s.id === id);
     Status.set('syncing', 'Deleting…');
     const { error } = await db.from('subscriptions').delete().eq('id', id);
     if (error) { Status.set('disconnected', 'Delete failed'); throw error; }
     State.subscriptions = State.subscriptions.filter(s => s.id !== id);
     this._setReady();
+    if (sub) ActivityLog.record('delete', 'recurring', sub.name);
   },
 
   // Transactions
@@ -2970,6 +3191,9 @@ const Data = {
     if (error) { Status.set('disconnected', 'Save failed'); throw error; }
     State.transactions.unshift(row);
     this._setReady();
+    const desc = `${row.description || '(no description)'} · ${App.formatCurrency(row.amount)}`;
+    const entity = row.is_payment ? 'payment' : (row.external_to ? 'external transfer' : 'transaction');
+    ActivityLog.record('create', entity, desc);
     return row;
   },
   // Cria várias transações de uma vez (parcelamento)
@@ -2982,6 +3206,11 @@ const Data = {
     if (error) { Status.set('disconnected', 'Failed saving installments'); throw error; }
     (data || []).forEach(r => State.transactions.unshift(r));
     this._setReady();
+    if (data && data.length) {
+      const total = data.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+      ActivityLog.record('create', 'installments',
+        `${data[0].description || 'Installments'} · ${data.length}x · ${App.formatCurrency(total)}`);
+    }
     return data;
   },
   async updateTransaction(id, data) {
@@ -2995,15 +3224,22 @@ const Data = {
     const idx = State.transactions.findIndex(t => t.id === id);
     if (idx >= 0) State.transactions[idx] = row;
     this._setReady();
+    const desc = `${row.description || '(no description)'} · ${App.formatCurrency(row.amount)}`;
+    ActivityLog.record('update', 'transaction', desc);
     return row;
   },
   async deleteTransaction(id) {
     if (!db) throw new Error('Supabase not configured');
+    const tx = State.transactions.find(t => t.id === id);
     Status.set('syncing', 'Deleting…');
     const { error } = await db.from('transactions').delete().eq('id', id);
     if (error) { Status.set('disconnected', 'Delete failed'); throw error; }
     State.transactions = State.transactions.filter(t => t.id !== id);
     this._setReady();
+    if (tx) {
+      const desc = `${tx.description || '(no description)'} · ${App.formatCurrency(tx.amount)}`;
+      ActivityLog.record('delete', 'transaction', desc);
+    }
   },
 
   // Transfers — creates 2 linked transactions (out + in)
@@ -3044,6 +3280,8 @@ const Data = {
     if (error) { Status.set('disconnected', 'Save failed'); throw error; }
     (data || []).forEach(r => State.transactions.unshift(r));
     this._setReady();
+    ActivityLog.record('create', 'transfer',
+      `${fromAcc?.name || '?'} → ${toAcc?.name || '?'} · ${App.formatCurrency(amount)}`);
     return data;
   },
 
@@ -3081,6 +3319,8 @@ const Data = {
       if (idx >= 0) State.transactions[idx] = updated;
     });
     this._setReady();
+    ActivityLog.record('update', 'transfer',
+      `${fromAcc?.name || '?'} → ${toAcc?.name || '?'} · ${App.formatCurrency(amount)}`);
   },
 
   async deleteTransfer(groupId) {
@@ -3090,6 +3330,7 @@ const Data = {
     if (error) { Status.set('disconnected', 'Delete failed'); throw error; }
     State.transactions = State.transactions.filter(t => t.transfer_group_id !== groupId);
     this._setReady();
+    ActivityLog.record('delete', 'transfer', 'Transfer pair removed');
   },
 };
 
@@ -4383,6 +4624,33 @@ const Transactions = {
 
     this.renderSummary(txs);
     this.renderList(txs);
+    this.populateCategoryFilter();
+  },
+
+  populateCategoryFilter() {
+    const select = document.getElementById('tx-category-filter');
+    if (!select) return;
+    // Only repopulate if categories changed (cheap signature check)
+    const sig = State.categories.map(c => c.id).join(',');
+    if (select.dataset.sig === sig) {
+      // Just sync selected value
+      select.value = this.filterCategory;
+      select.classList.toggle('active', this.filterCategory !== 'all');
+      return;
+    }
+    select.dataset.sig = sig;
+    // Build option list — sort alphabetically
+    const sorted = [...State.categories].sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '')
+    );
+    const optionsHtml = ['<option value="all">All categories</option>']
+      .concat(sorted.map(c =>
+        `<option value="${c.id}">${(c.icon || '')} ${escapeHtml(c.name)}</option>`.trim()
+      ))
+      .join('');
+    select.innerHTML = optionsHtml;
+    select.value = this.filterCategory;
+    select.classList.toggle('active', this.filterCategory !== 'all');
   },
 
   renderSummary(txs) {
@@ -6392,8 +6660,41 @@ const Dashboard = {
     const monthStats = this.calcMonthStats();
     const byOwner = this.calcByOwner();
 
-    // 3 cards principais
-    document.getElementById('dash-today-value').textContent = App.formatCurrency(today);
+    // Hero card view mode: 'balance' (default) or 'spending'
+    const viewMode = localStorage.getItem('dashHeroMode') || 'balance';
+
+    if (viewMode === 'spending') {
+      // Show today's spending (net = expenses - income today, excluding transfers/payments)
+      const todayStr = new Date().toISOString().split('T')[0];
+      let todayExpense = 0;
+      let todayIncome = 0;
+      State.transactions.forEach(t => {
+        if (t.date !== todayStr) return;
+        if (this.isTransferTx ? this.isTransferTx(t) : (t.is_transfer || t.external_to)) return;
+        if (t.is_payment) return;
+        const v = Number(t.amount) || 0;
+        if (t.type === 'income') todayIncome += v;
+        else todayExpense += v;
+      });
+      const net = todayExpense - todayIncome;
+      document.getElementById('dash-today-label').textContent = "Today's spending";
+      const valEl = document.getElementById('dash-today-value');
+      valEl.textContent = (net >= 0 ? '-' : '+') + App.formatCurrency(Math.abs(net));
+      valEl.classList.remove('text-success', 'text-danger');
+      if (net > 0) valEl.classList.add('text-danger');
+      else if (net < 0) valEl.classList.add('text-success');
+      // Hide the PV/Gigi split (irrelevant in spending mode)
+      const split = document.getElementById('dash-today-split');
+      if (split) split.style.display = 'none';
+    } else {
+      // 3 cards principais
+      document.getElementById('dash-today-label').textContent = "Today's balance";
+      const valEl = document.getElementById('dash-today-value');
+      valEl.textContent = App.formatCurrency(today);
+      valEl.classList.remove('text-success', 'text-danger');
+      const split = document.getElementById('dash-today-split');
+      if (split) split.style.display = '';
+    }
     document.getElementById('dash-due-value').textContent = '-' + App.formatCurrency(dueThisMonth);
     document.getElementById('dash-projected-value').textContent = App.formatCurrency(projected);
 
@@ -6672,6 +6973,26 @@ if (searchInput) {
   });
 }
 
+// Category filter dropdown
+const categorySelect = document.getElementById('tx-category-filter');
+if (categorySelect) {
+  categorySelect.addEventListener('change', (e) => {
+    Transactions.filterCategory = e.target.value;
+    Transactions.render();
+  });
+}
+
+// Dashboard hero toggle (Today's balance ↔ Today's spending)
+const heroToggle = document.getElementById('dash-today-toggle');
+if (heroToggle) {
+  heroToggle.addEventListener('click', () => {
+    const current = localStorage.getItem('dashHeroMode') || 'balance';
+    const next = current === 'balance' ? 'spending' : 'balance';
+    localStorage.setItem('dashHeroMode', next);
+    Dashboard.render();
+  });
+}
+
 const badge = document.getElementById('user-badge');
 let pressTimer;
 const startPress = () => {
@@ -6736,8 +7057,20 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
     document.getElementById('tab-' + target).classList.remove('hidden');
+    if (target === 'history') ActivityLog.render();
   });
 });
+
+// History "Clear" button
+const historyClearBtn = document.getElementById('history-clear');
+if (historyClearBtn) {
+  historyClearBtn.addEventListener('click', () => {
+    if (!confirm('Clear all activity history? This cannot be undone.')) return;
+    ActivityLog.clear();
+    ActivityLog.render();
+    toast('History cleared');
+  });
+}
 
 document.addEventListener('click', (e) => {
   const addBtn = e.target.closest('[data-add]');
@@ -6861,26 +7194,7 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Category filter — cycles through ALL categories
-  const categoryFilter = e.target.closest('.tx-filter[data-category-filter]');
-  if (categoryFilter) {
-    const cats = State.categories;
-    // Build cycle: ['all', cat1.id, cat2.id, ...]
-    const cycle = ['all', ...cats.map(c => c.id)];
-    const current = Transactions.filterCategory;
-    const idx = cycle.indexOf(current);
-    const next = cycle[(idx + 1) % cycle.length];
-    Transactions.filterCategory = next;
-    let label = 'All categories';
-    if (next !== 'all') {
-      const cat = cats.find(c => c.id === next);
-      label = cat ? `${cat.icon || ''} ${cat.name}`.trim() : 'Unknown';
-    }
-    categoryFilter.querySelector('span').textContent = label;
-    categoryFilter.classList.toggle('active', next !== 'all');
-    Transactions.render();
-    return;
-  }
+  // Category filter handled by <select> change event below (not click cycle)
 });
 
 // CONEXÃO
