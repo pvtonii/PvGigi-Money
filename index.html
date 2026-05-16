@@ -915,6 +915,283 @@ h1, h2, h3 {
   line-height: 1.5;
 }
 
+/* ===== MORE DRAWER (bottom sheet) ===== */
+.more-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration) var(--ease);
+  z-index: 90;
+}
+.more-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.more-drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 500px;
+  margin: 0 auto;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--space-3) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom));
+  transform: translateY(100%);
+  transition: transform var(--duration-md) var(--ease);
+  z-index: 95;
+  border-top: 1px solid var(--border-default);
+}
+.more-drawer.active {
+  transform: translateY(0);
+}
+.more-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--border-default);
+  border-radius: 2px;
+  margin: 0 auto var(--space-3);
+}
+.more-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) 0;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.more-option:last-child { border-bottom: none; }
+.more-option-icon {
+  font-size: 1.5rem;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.more-option-info {
+  flex: 1;
+  min-width: 0;
+}
+.more-option-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.more-option-sub {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* ===== INSIGHTS ===== */
+.insights-back {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.insights-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.insights-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+.insights-section-title {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-3);
+}
+.insights-pct-value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.insights-pct-sub {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+  font-family: var(--font-mono);
+}
+.insights-warn {
+  margin-top: var(--space-2);
+  font-size: 0.75rem;
+  color: var(--warning);
+}
+
+/* Top categories rows */
+.topcat-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.topcat-row:last-child { margin-bottom: 0; }
+.topcat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.topcat-info {
+  flex: 1;
+  min-width: 0;
+}
+.topcat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.topcat-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.topcat-pct {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+.topcat-bar-track {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin: 4px 0;
+}
+.topcat-bar-fill {
+  height: 100%;
+  background: var(--text-primary);
+  border-radius: var(--radius-full);
+  transition: width var(--duration);
+}
+.topcat-amount {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Stacked bar chart (6-month comparison) */
+.stack-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  height: 160px;
+  margin-bottom: var(--space-3);
+  padding: 0 var(--space-2);
+}
+.stack-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  position: relative;
+}
+.stack-bar {
+  width: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  min-height: 4px;
+  background: var(--bg-tertiary);
+}
+.stack-segment {
+  width: 100%;
+  min-height: 1px;
+}
+.stack-label {
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
+  margin-top: 6px;
+  font-weight: 500;
+}
+.stack-total {
+  font-size: 0.5625rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+.stack-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+}
+.stack-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+}
+.stack-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Weekday heatmap */
+.heatmap-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.heatmap-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.heatmap-label {
+  width: 36px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.heatmap-bar-track {
+  flex: 1;
+  height: 16px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.heatmap-bar-fill {
+  height: 100%;
+  background: var(--danger);
+  border-radius: var(--radius-sm);
+  transition: width var(--duration);
+}
+.heatmap-value {
+  width: 70px;
+  text-align: right;
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
 /* History (activity log) */
 .history-row {
   display: flex;
@@ -2688,6 +2965,9 @@ html { scroll-behavior: smooth; }
     <section class="page" id="page-calendar">
       <div id="calendar-page-content"></div>
     </section>
+    <section class="page" id="page-insights">
+      <div id="insights-page-content"></div>
+    </section>
   </main>
 
   <!-- FAB backdrop (closes menu when clicking outside) -->
@@ -2740,14 +3020,35 @@ html { scroll-behavior: smooth; }
       </svg>
       <span>Calendar</span>
     </button>
-    <button class="nav-item" data-page="settings">
+    <button class="nav-item" id="nav-more-btn">
       <svg viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="3" stroke="currentColor"/>
-        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
-      <span>Settings</span>
+      <span>More</span>
     </button>
   </nav>
+</div>
+
+<!-- More drawer (bottom sheet) -->
+<div class="more-overlay" id="more-overlay"></div>
+<div class="more-drawer" id="more-drawer">
+  <div class="more-handle"></div>
+  <button class="more-option" data-more-go="insights">
+    <div class="more-option-icon">📊</div>
+    <div class="more-option-info">
+      <div class="more-option-title">Insights</div>
+      <div class="more-option-sub">Trends, top categories, monthly comparison</div>
+    </div>
+    <svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <button class="more-option" data-more-go="settings">
+    <div class="more-option-icon">⚙️</div>
+    <div class="more-option-info">
+      <div class="more-option-title">Settings</div>
+      <div class="more-option-sub">Categories, accounts, cards, recurring</div>
+    </div>
+    <svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
 </div>
 
 <!-- MODAL -->
@@ -3784,15 +4085,21 @@ const PAGE_TITLES = {
   transactions: 'Activity',
   cards: 'Cards',
   calendar: 'Calendar',
+  insights: 'Insights',
   settings: 'Settings',
 };
 
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n =>
-    n.classList.toggle('active', n.dataset.page === name)
-  );
+  // Update nav active state — settings/insights both light up the "More" button
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.id === 'nav-more-btn') {
+      n.classList.toggle('active', name === 'settings' || name === 'insights');
+    } else {
+      n.classList.toggle('active', n.dataset.page === name);
+    }
+  });
   document.getElementById('header-title').textContent = PAGE_TITLES[name] || 'Finance';
 
   if (name === 'settings') Settings.render();
@@ -3804,6 +4111,7 @@ function showPage(name) {
     Cards.render();
   }
   if (name === 'calendar') Calendar.render();
+  if (name === 'insights') Insights.render();
 }
 
 function resetLoginUI() {
@@ -6107,8 +6415,298 @@ async function confirmRecurrence(subscriptionId) {
    CARDS PAGE — Lista de cartões + visualização de fatura
    ============================================ */
 /* ============================================
- * CALENDAR — Monthly view with bills, payments, recurrences plotted
+ * INSIGHTS — analytics dashboard (% income spent, top categories, 6-month bars, weekday heatmap)
  * ============================================ */
+const Insights = {
+  render() {
+    const container = document.getElementById('insights-page-content');
+    if (!container) return;
+    container.innerHTML = `
+      <div class="insights-back">
+        <button id="insights-back-btn" class="cal-nav">‹</button>
+        <span class="insights-title">Insights</span>
+      </div>
+      ${this.renderIncomeUsage()}
+      ${this.renderTopCategories()}
+      ${this.renderMonthlyComparison()}
+      ${this.renderWeekdayHeatmap()}
+    `;
+    document.getElementById('insights-back-btn').addEventListener('click', () => {
+      showPage('dashboard');
+    });
+  },
+
+  /** A "spending" transaction = expense or external transfer (matches Today's spending logic) */
+  isSpending(t) {
+    if (t.is_transfer) return false;     // internal transfers don't count
+    if (t.is_payment) return false;      // card payments — already counted at purchase
+    if (t.type === 'income') return false;
+    return true;                          // expense or external transfer
+  },
+
+  /** Get all transactions for a YYYY-MM month */
+  txsInMonth(ym) {
+    return State.transactions.filter(t => (t.date || '').startsWith(ym));
+  },
+
+  /** Sum spending for a YYYY-MM month */
+  spendingInMonth(ym) {
+    return this.txsInMonth(ym)
+      .filter(t => this.isSpending(t))
+      .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  },
+
+  /** Sum income for a YYYY-MM month */
+  incomeInMonth(ym) {
+    return this.txsInMonth(ym)
+      .filter(t => t.type === 'income' && !t.is_transfer)
+      .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  },
+
+  currentMonth() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  },
+
+  // ============ Section 1: % income spent ============
+  renderIncomeUsage() {
+    const ym = this.currentMonth();
+    const income = this.incomeInMonth(ym);
+    const spending = this.spendingInMonth(ym);
+    const pct = income > 0 ? Math.min(999, (spending / income) * 100) : 0;
+    const pctDisplay = income > 0 ? `${pct.toFixed(0)}%` : '—';
+    const barWidth = Math.min(100, pct);
+    const barClass = pct < 70 ? 'low' : pct < 100 ? 'medium' : 'high';
+
+    let subtitle;
+    if (income === 0) {
+      subtitle = 'No income recorded this month';
+    } else {
+      subtitle = `${App.formatCurrency(spending)} of ${App.formatCurrency(income)}`;
+    }
+
+    return `
+      <div class="insights-card">
+        <div class="insights-section-title">Income usage this month</div>
+        <div class="insights-pct-value">${pctDisplay}</div>
+        <div class="insights-pct-sub">${subtitle}</div>
+        <div class="credit-bar-track" style="margin-top: var(--space-3);">
+          <div class="credit-bar-fill ${barClass}" style="width: ${barWidth.toFixed(1)}%;"></div>
+        </div>
+        ${pct >= 100 ? '<div class="insights-warn">⚠️ Spending exceeds income</div>' : ''}
+      </div>
+    `;
+  },
+
+  // ============ Section 2: Top 5 categories ============
+  renderTopCategories() {
+    const ym = this.currentMonth();
+    const txs = this.txsInMonth(ym).filter(t => this.isSpending(t));
+    const totals = {};
+    txs.forEach(t => {
+      const key = t.category_id || 'uncategorized';
+      totals[key] = (totals[key] || 0) + (Number(t.amount) || 0);
+    });
+    const totalSum = Object.values(totals).reduce((s, v) => s + v, 0);
+    const sorted = Object.entries(totals)
+      .map(([id, value]) => {
+        const cat = State.categories.find(c => c.id === id);
+        return {
+          name: cat?.name || 'Uncategorized',
+          icon: cat?.icon || '•',
+          color: cat?.color,
+          value,
+        };
+      })
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    if (!sorted.length) {
+      return `
+        <div class="insights-card">
+          <div class="insights-section-title">Top categories this month</div>
+          <div class="empty-state-text">No spending yet this month.</div>
+        </div>
+      `;
+    }
+
+    const max = sorted[0].value;
+    return `
+      <div class="insights-card">
+        <div class="insights-section-title">Top categories this month</div>
+        ${sorted.map(c => {
+          const pct = totalSum > 0 ? (c.value / totalSum * 100).toFixed(0) : 0;
+          const barW = max > 0 ? (c.value / max * 100).toFixed(1) : 0;
+          return `
+            <div class="topcat-row">
+              <div class="topcat-icon" style="${c.color ? `background:${c.color}22;color:${c.color};` : ''}">${c.icon}</div>
+              <div class="topcat-info">
+                <div class="topcat-header">
+                  <span class="topcat-name">${escapeHtml(c.name)}</span>
+                  <span class="topcat-pct">${pct}%</span>
+                </div>
+                <div class="topcat-bar-track">
+                  <div class="topcat-bar-fill" style="width: ${barW}%; ${c.color ? `background:${c.color};` : ''}"></div>
+                </div>
+                <div class="topcat-amount">${App.formatCurrency(c.value)}</div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  },
+
+  // ============ Section 3: 6-month stacked bars by category ============
+  renderMonthlyComparison() {
+    const months = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const ym = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      const label = d.toLocaleDateString(undefined, { month: 'short' });
+      months.push({ ym, label });
+    }
+
+    // For each month, aggregate spending by category
+    const monthData = months.map(m => {
+      const txs = this.txsInMonth(m.ym).filter(t => this.isSpending(t));
+      const byCat = {};
+      txs.forEach(t => {
+        const key = t.category_id || 'uncategorized';
+        byCat[key] = (byCat[key] || 0) + (Number(t.amount) || 0);
+      });
+      const total = Object.values(byCat).reduce((s, v) => s + v, 0);
+      return { ...m, byCat, total };
+    });
+
+    // Find top 5 categories overall (for the stacks); rest grouped as "Other"
+    const overallTotals = {};
+    monthData.forEach(m => {
+      Object.entries(m.byCat).forEach(([k, v]) => {
+        overallTotals[k] = (overallTotals[k] || 0) + v;
+      });
+    });
+    const topCatIds = Object.entries(overallTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id]) => id);
+
+    const palette = ['#f87171', '#fbbf24', '#4ade80', '#60a5fa', '#a78bfa', '#94a3b8'];
+    const catMeta = topCatIds.map((id, i) => {
+      const cat = State.categories.find(c => c.id === id);
+      return { id, name: cat?.name || 'Uncategorized', color: palette[i] };
+    });
+    catMeta.push({ id: '__other', name: 'Other', color: palette[5] });
+
+    const maxTotal = Math.max(...monthData.map(m => m.total), 1);
+
+    if (monthData.every(m => m.total === 0)) {
+      return `
+        <div class="insights-card">
+          <div class="insights-section-title">Last 6 months</div>
+          <div class="empty-state-text">No spending data yet.</div>
+        </div>
+      `;
+    }
+
+    // Build stacked bars
+    const barsHtml = monthData.map(m => {
+      const total = m.total;
+      const heightPct = (total / maxTotal) * 100;
+      const segments = catMeta.map(c => {
+        let val;
+        if (c.id === '__other') {
+          val = Object.entries(m.byCat)
+            .filter(([id]) => !topCatIds.includes(id))
+            .reduce((s, [, v]) => s + v, 0);
+        } else {
+          val = m.byCat[c.id] || 0;
+        }
+        if (val === 0) return '';
+        const segH = total > 0 ? (val / total * 100) : 0;
+        return `<div class="stack-segment" style="height:${segH}%; background:${c.color};" title="${c.name}: ${App.formatCurrency(val)}"></div>`;
+      }).join('');
+
+      return `
+        <div class="stack-col">
+          <div class="stack-bar" style="height:${heightPct}%;">${segments}</div>
+          <div class="stack-label">${m.label}</div>
+          <div class="stack-total">${total > 0 ? App.formatCurrency(total).replace('$', '$') : ''}</div>
+        </div>
+      `;
+    }).join('');
+
+    const legendHtml = catMeta.filter(c => overallTotals[c.id] || c.id === '__other')
+      .map(c => `
+        <div class="stack-legend-item">
+          <span class="stack-legend-dot" style="background:${c.color};"></span>
+          ${escapeHtml(c.name)}
+        </div>
+      `).join('');
+
+    return `
+      <div class="insights-card">
+        <div class="insights-section-title">Last 6 months</div>
+        <div class="stack-chart">${barsHtml}</div>
+        <div class="stack-legend">${legendHtml}</div>
+      </div>
+    `;
+  },
+
+  // ============ Section 4: Spending by weekday ============
+  renderWeekdayHeatmap() {
+    // Last 60 days of spending
+    const today = new Date();
+    const cutoff = new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+
+    const totals = [0, 0, 0, 0, 0, 0, 0]; // Sun-Sat
+    State.transactions.forEach(t => {
+      if (!t.date || t.date < cutoffStr) return;
+      if (!this.isSpending(t)) return;
+      const d = new Date(t.date + 'T12:00:00');
+      const dow = d.getDay();
+      totals[dow] += Number(t.amount) || 0;
+    });
+    const max = Math.max(...totals, 1);
+    const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    const allZero = totals.every(v => v === 0);
+    if (allZero) {
+      return `
+        <div class="insights-card">
+          <div class="insights-section-title">Spending by weekday (last 60 days)</div>
+          <div class="empty-state-text">No spending data yet.</div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="insights-card">
+        <div class="insights-section-title">Spending by weekday (last 60 days)</div>
+        <div class="heatmap-rows">
+          ${labels.map((lab, i) => {
+            const val = totals[i];
+            const intensity = val / max;
+            const barW = (intensity * 100).toFixed(1);
+            return `
+              <div class="heatmap-row">
+                <div class="heatmap-label">${lab}</div>
+                <div class="heatmap-bar-track">
+                  <div class="heatmap-bar-fill" style="width:${barW}%; opacity:${0.3 + intensity * 0.7};"></div>
+                </div>
+                <div class="heatmap-value">${val > 0 ? App.formatCurrency(val) : '—'}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  },
+};
+
+
 const Calendar = {
   // YYYY-MM string of the currently viewed month
   currentMonth: null,
@@ -7003,6 +7601,28 @@ if (heroToggle) {
     Dashboard.render();
   });
 }
+
+// More drawer (bottom sheet)
+const moreBtn = document.getElementById('nav-more-btn');
+const moreOverlay = document.getElementById('more-overlay');
+const moreDrawer = document.getElementById('more-drawer');
+function openMoreDrawer() {
+  moreOverlay.classList.add('active');
+  moreDrawer.classList.add('active');
+}
+function closeMoreDrawer() {
+  moreOverlay.classList.remove('active');
+  moreDrawer.classList.remove('active');
+}
+if (moreBtn) moreBtn.addEventListener('click', openMoreDrawer);
+if (moreOverlay) moreOverlay.addEventListener('click', closeMoreDrawer);
+document.querySelectorAll('[data-more-go]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.moreGo;
+    closeMoreDrawer();
+    showPage(target);
+  });
+});
 
 const badge = document.getElementById('user-badge');
 let pressTimer;
