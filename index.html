@@ -1192,6 +1192,16 @@ h1, h2, h3 {
   flex-shrink: 0;
 }
 
+/* App version footer (in Settings → Connection tab) */
+.app-version {
+  margin-top: var(--space-6);
+  text-align: center;
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
 /* History (activity log) */
 .history-row {
   display: flex;
@@ -2936,6 +2946,10 @@ html { scroll-behavior: smooth; }
             Credentials are stored on your device (localStorage).<br>
             They aren't sent anywhere except Supabase.
           </p>
+        </div>
+
+        <div class="app-version">
+          Version 01 · May 17, 2026
         </div>
       </div>
     </section>
