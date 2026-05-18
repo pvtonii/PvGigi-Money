@@ -880,6 +880,8 @@ h1, h2, h3 {
 }
 .form-input, .form-select, .form-textarea {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: var(--space-3) var(--space-4);
   background: var(--bg-secondary);
   border: 1px solid var(--border-default);
@@ -900,6 +902,13 @@ h1, h2, h3 {
   font-family: 'SF Mono', Menlo, monospace;
   font-size: 0.8125rem;
   word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+/* Tab content containers — prevent overflow */
+.tab-content {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 .form-select {
   appearance: none;
@@ -1192,14 +1201,67 @@ h1, h2, h3 {
   flex-shrink: 0;
 }
 
-/* App version footer (in Settings → Connection tab) */
-.app-version {
-  margin-top: var(--space-6);
+/* Connection tab footer (info + version, compact) */
+.conn-footer-info {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
   text-align: center;
+}
+.conn-footer-text {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  max-width: 280px;
+  margin: 0 auto;
+}
+.app-version {
+  margin-top: var(--space-3);
   font-size: 0.6875rem;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
   letter-spacing: 0.04em;
+}
+
+/* Recent activity rows on Dashboard */
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.recent-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.recent-row:first-of-type {
+  padding-top: 0;
+}
+.recent-info {
+  flex: 1;
+  min-width: 0;
+}
+.recent-text {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: baseline;
+}
+.recent-desc {
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+.recent-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  font-family: var(--font-mono);
 }
 
 /* History (activity log) */
@@ -2807,6 +2869,9 @@ html { scroll-behavior: smooth; }
       <!-- Upcoming recurrences (this month) -->
       <div id="dash-upcoming"></div>
 
+      <!-- Recent activity (last 3 actions) -->
+      <div id="dash-recent" class="fade-in"></div>
+
       <!-- Cartões resumo -->
       <div class="fade-in" id="dash-cards-summary"></div>
     </section>
@@ -2941,15 +3006,11 @@ html { scroll-behavior: smooth; }
           <button class="btn btn-primary" id="conn-save">Save and connect</button>
         </div>
 
-        <div class="empty-state" style="padding-top:var(--space-6);">
-          <p class="empty-state-text">
-            Credentials are stored on your device (localStorage).<br>
-            They aren't sent anywhere except Supabase.
+        <div class="conn-footer-info">
+          <p class="conn-footer-text">
+            Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-        </div>
-
-        <div class="app-version">
-          Version 01 · May 17, 2026
+          <div class="app-version">Version 02 · May 17, 2026</div>
         </div>
       </div>
     </section>
@@ -6436,18 +6497,11 @@ const Insights = {
     const container = document.getElementById('insights-page-content');
     if (!container) return;
     container.innerHTML = `
-      <div class="insights-back">
-        <button id="insights-back-btn" class="cal-nav">‹</button>
-        <span class="insights-title">Insights</span>
-      </div>
       ${this.renderIncomeUsage()}
       ${this.renderTopCategories()}
       ${this.renderMonthlyComparison()}
       ${this.renderWeekdayHeatmap()}
     `;
-    document.getElementById('insights-back-btn').addEventListener('click', () => {
-      showPage('dashboard');
-    });
   },
 
   /** A "spending" transaction = expense or external transfer (matches Today's spending logic) */
@@ -7343,8 +7397,71 @@ const Dashboard = {
     // Upcoming recurrences
     this.renderUpcoming(pendingRec.items);
 
+    // Recent activity (last 3 actions)
+    this.renderRecent();
+
     // Cartões com barrinhas
     this.renderCardsSummary();
+  },
+
+  /** Renders last 3 actions for current user or filter */
+  recentFilterUser: 'all', // 'all' | 'pv' | 'gigi'
+
+  async renderRecent() {
+    const container = document.getElementById('dash-recent');
+    if (!container) return;
+    const entries = await ActivityLog.fetch();
+    if (!entries.length) {
+      container.innerHTML = '';
+      return;
+    }
+    const filter = this.recentFilterUser;
+    const filtered = filter === 'all'
+      ? entries
+      : entries.filter(e => e.user_id === filter);
+    const top3 = filtered.slice(0, 3);
+
+    const cycle = ['all', 'pv', 'gigi'];
+    const labels = { all: 'Anyone', pv: 'PV', gigi: 'Gigi' };
+    const actionIcons = { create: '+', update: '✎', delete: '×' };
+    const actionLabels = { create: 'Created', update: 'Updated', delete: 'Deleted' };
+
+    const rowsHtml = top3.length ? top3.map(e => {
+      const userClass = e.user_id === 'pv' ? 'pv' : e.user_id === 'gigi' ? 'gigi' : 'shared';
+      const userLetter = e.user_id === 'pv' ? 'P' : e.user_id === 'gigi' ? 'G' : '?';
+      return `
+        <div class="recent-row">
+          <div class="history-icon history-${e.action}" style="width:24px;height:24px;font-size:0.75rem;">${actionIcons[e.action] || '·'}</div>
+          <div class="recent-info">
+            <div class="recent-text">
+              <strong>${actionLabels[e.action] || e.action}</strong>
+              <span class="recent-desc">${escapeHtml(e.description || '')}</span>
+            </div>
+            <div class="recent-meta">
+              <span class="inline-avatar ${userClass}" style="width:11px;height:11px;font-size:0.4375rem;">${userLetter}</span>
+              ${App.formatTimestamp(e.created_at)}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('') : `<div class="empty-state-text" style="text-align:center;padding:var(--space-3) 0;">No recent activity for ${labels[filter]}</div>`;
+
+    container.innerHTML = `
+      <div class="card upcoming-card fade-in">
+        <div class="upcoming-header">
+          <span class="upcoming-title">Recent activity</span>
+          <button class="tx-filter ${filter !== 'all' ? 'active' : ''}" id="dash-recent-filter">
+            <span style="font-size:0.6875rem;">${labels[filter]}</span>
+          </button>
+        </div>
+        ${rowsHtml}
+      </div>
+    `;
+    document.getElementById('dash-recent-filter').addEventListener('click', () => {
+      const cur = cycle.indexOf(this.recentFilterUser);
+      this.recentFilterUser = cycle[(cur + 1) % cycle.length];
+      this.renderRecent();
+    });
   },
 
   /** Returns pending (not yet confirmed) recurrences for the current month */
