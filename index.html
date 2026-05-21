@@ -1264,6 +1264,89 @@ h1, h2, h3 {
   font-family: var(--font-mono);
 }
 
+/* ===== TAGS ===== */
+.tag-input-wrap {
+  position: relative;
+}
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+.tag-chip button {
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  line-height: 1;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+.tag-chip button:hover {
+  background: var(--danger);
+  color: white;
+}
+.tag-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.tag-suggestion {
+  padding: 6px 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+.tag-suggestion:hover {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+.tx-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.tx-tag {
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+}
+.form-hint {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
 /* History (activity log) */
 .history-row {
   display: flex;
@@ -3014,7 +3097,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 03 · May 17, 2026</div>
+          <div class="app-version">Version 04 · May 17, 2026</div>
         </div>
       </div>
     </section>
@@ -5002,21 +5085,29 @@ const Transactions = {
     // Text search: matches description, category name, account/card name
     const term = (this.searchTerm || '').trim().toLowerCase();
     if (term) {
-      txs = txs.filter(t => {
-        const desc = (t.description || '').toLowerCase();
-        if (desc.includes(term)) return true;
-        const cat = State.categories.find(c => c.id === t.category_id);
-        if (cat && cat.name.toLowerCase().includes(term)) return true;
-        const acc = State.accounts.find(a => a.id === t.account_id);
-        if (acc && acc.name.toLowerCase().includes(term)) return true;
-        const card = State.cards.find(c => c.id === t.card_id);
-        if (card && card.name.toLowerCase().includes(term)) return true;
-        if (t.external_to && t.external_to.toLowerCase().includes(term)) return true;
-        // Match by amount (exact or rounded)
-        const amountStr = String(t.amount);
-        if (amountStr.includes(term)) return true;
-        return false;
-      });
+      // If the term starts with #, treat it as an exact tag filter
+      if (term.startsWith('#')) {
+        const tagQuery = term.replace(/^#+/, '');
+        txs = txs.filter(t => (t.tags || []).some(tg => tg.includes(tagQuery)));
+      } else {
+        txs = txs.filter(t => {
+          const desc = (t.description || '').toLowerCase();
+          if (desc.includes(term)) return true;
+          const cat = State.categories.find(c => c.id === t.category_id);
+          if (cat && cat.name.toLowerCase().includes(term)) return true;
+          const acc = State.accounts.find(a => a.id === t.account_id);
+          if (acc && acc.name.toLowerCase().includes(term)) return true;
+          const card = State.cards.find(c => c.id === t.card_id);
+          if (card && card.name.toLowerCase().includes(term)) return true;
+          if (t.external_to && t.external_to.toLowerCase().includes(term)) return true;
+          // Match tags too in free search
+          if ((t.tags || []).some(tg => tg.includes(term))) return true;
+          // Match by amount (exact or rounded)
+          const amountStr = String(t.amount);
+          if (amountStr.includes(term)) return true;
+          return false;
+        });
+      }
     }
 
     this.renderSummary(txs);
@@ -5198,6 +5289,7 @@ const Transactions = {
             ${installmentBadge ? `<span>·</span>${installmentBadge}` : ''}
             ${byBadge ? `<span>·</span>${byBadge}` : ''}
           </div>
+          ${(t.tags && t.tags.length) ? `<div class="tx-tags">${t.tags.map(tg => `<span class="tx-tag">#${escapeHtml(tg)}</span>`).join('')}</div>` : ''}
         </div>
         <div class="tx-amount-block">
           <span class="tx-source-type ${sourceTypeLabel}">${sourceTypeLabel}</span>
@@ -5368,6 +5460,17 @@ function openTransactionForm(transaction = null) {
       <input class="form-input" id="tx-description" value="${escapeHtml(t.description || '')}" placeholder="e.g. Coffee at Starbucks">
     </div>
 
+    <!-- Tags -->
+    <div class="form-field">
+      <label class="form-label">Tags <span style="color:var(--text-tertiary);font-weight:400;">(optional)</span></label>
+      <div class="tag-input-wrap">
+        <div class="tag-chips" id="tx-tag-chips"></div>
+        <input class="form-input" id="tx-tag-input" placeholder="#lasvegas2025, #work… type # and pick" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <div class="tag-suggestions" id="tx-tag-suggestions" style="display:none;"></div>
+      </div>
+      <div class="form-hint">Group expenses across categories — e.g. a trip, a project, an event.</div>
+    </div>
+
     <!-- Categoria -->
     <div class="form-field">
       <label class="form-label">Category</label>
@@ -5441,6 +5544,93 @@ function openTransactionForm(transaction = null) {
   let selectedSource = initialSource; // 'account' | 'card'
   let installments = t.installments_total || 1;
   let showAllSources = false; // U3: when true, ignores owner filter on Pay with
+
+  // ===== Tags state & setup =====
+  let selectedTags = Array.isArray(t.tags) ? [...t.tags] : [];
+  const tagInput = document.getElementById('tx-tag-input');
+  const tagChipsEl = document.getElementById('tx-tag-chips');
+  const tagSuggestEl = document.getElementById('tx-tag-suggestions');
+
+  // Gather all existing tags across transactions (unique, sorted)
+  function allKnownTags() {
+    const set = new Set();
+    State.transactions.forEach(tx => {
+      (tx.tags || []).forEach(tg => set.add(tg));
+    });
+    return [...set].sort();
+  }
+
+  function normalizeTag(raw) {
+    return raw.replace(/^#+/, '').trim().toLowerCase().replace(/\s+/g, '');
+  }
+
+  function renderTagChips() {
+    tagChipsEl.innerHTML = selectedTags.map(tg => `
+      <span class="tag-chip">#${escapeHtml(tg)}<button type="button" data-remove-tag="${escapeHtml(tg)}">×</button></span>
+    `).join('');
+    tagChipsEl.querySelectorAll('[data-remove-tag]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedTags = selectedTags.filter(x => x !== btn.dataset.removeTag);
+        renderTagChips();
+      });
+    });
+  }
+
+  function addTag(raw) {
+    const tag = normalizeTag(raw);
+    if (tag && !selectedTags.includes(tag)) {
+      selectedTags.push(tag);
+      renderTagChips();
+    }
+    tagInput.value = '';
+    tagSuggestEl.style.display = 'none';
+  }
+
+  function showSuggestions(query) {
+    const q = normalizeTag(query);
+    const known = allKnownTags().filter(tg =>
+      !selectedTags.includes(tg) && (q === '' || tg.includes(q))
+    );
+    if (!known.length) {
+      tagSuggestEl.style.display = 'none';
+      return;
+    }
+    tagSuggestEl.innerHTML = known.slice(0, 6).map(tg =>
+      `<button type="button" class="tag-suggestion" data-suggest-tag="${escapeHtml(tg)}">#${escapeHtml(tg)}</button>`
+    ).join('');
+    tagSuggestEl.style.display = '';
+    tagSuggestEl.querySelectorAll('[data-suggest-tag]').forEach(btn => {
+      btn.addEventListener('click', () => addTag(btn.dataset.suggestTag));
+    });
+  }
+
+  tagInput.addEventListener('input', (e) => {
+    const v = e.target.value;
+    if (v.includes('#') || v.length > 0) {
+      showSuggestions(v);
+    } else {
+      tagSuggestEl.style.display = 'none';
+    }
+  });
+  tagInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
+      if (tagInput.value.trim()) {
+        e.preventDefault();
+        addTag(tagInput.value);
+      }
+    } else if (e.key === 'Backspace' && tagInput.value === '' && selectedTags.length) {
+      selectedTags.pop();
+      renderTagChips();
+    }
+  });
+  tagInput.addEventListener('focus', () => showSuggestions(tagInput.value));
+  tagInput.addEventListener('blur', () => {
+    // Delay to allow click on suggestion
+    setTimeout(() => { tagSuggestEl.style.display = 'none'; }, 200);
+    // Also commit a typed-but-not-entered tag
+    if (tagInput.value.trim()) addTag(tagInput.value);
+  });
+  renderTagChips();
 
   // Toggle tipo
   const typeToggle = document.getElementById('tx-type');
@@ -5819,6 +6009,7 @@ function openTransactionForm(transaction = null) {
         category_id: selectedCategoryId,
         owner,
         created_by: Auth.getSession()?.userId,
+        tags: selectedTags,
       };
 
       // Detectar zona ambígua antes de salvar
