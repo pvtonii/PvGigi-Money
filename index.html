@@ -242,10 +242,8 @@ h1, h2, h3 {
 
 /* APP */
 #screen-app {
-  flex-direction: column;
   max-width: 480px;
   margin: 0 auto;
-  position: relative;
   background: var(--bg-primary);
   width: 100%;
 }
@@ -266,10 +264,6 @@ h1, h2, h3 {
   position: sticky;
   top: 0;
   z-index: 10;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  max-width: 500px;
-  margin: 0 auto;
 }
 .header-title-wrap {
   display: flex;
@@ -400,8 +394,6 @@ h1, h2, h3 {
 .app-content {
   padding: var(--space-4) var(--space-5) calc(80px + env(safe-area-inset-bottom) + var(--space-6));
   width: 100%;
-  max-width: 500px;
-  margin: 0 auto;
 }
 
 .page { display: none; }
@@ -706,18 +698,17 @@ h1, h2, h3 {
 .bottom-nav {
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   width: 100%;
   max-width: 480px;
+  margin: 0 auto;
   background: var(--bg-primary);
   border-top: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-around;
   padding: var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom));
   z-index: 20;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
 @media (min-width: 768px) {
   .bottom-nav { max-width: 520px; }
@@ -3097,7 +3088,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 05 · May 17, 2026</div>
+          <div class="app-version">Version 06 · May 17, 2026</div>
         </div>
       </div>
     </section>
