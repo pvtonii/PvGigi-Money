@@ -242,17 +242,8 @@ h1, h2, h3 {
 
 /* APP */
 #screen-app {
-  max-width: 480px;
-  margin: 0 auto;
   background: var(--bg-primary);
   width: 100%;
-}
-@media (min-width: 768px) {
-  #screen-app {
-    max-width: 520px;
-    border-left: 1px solid var(--border-subtle);
-    border-right: 1px solid var(--border-subtle);
-  }
 }
 
 .app-header {
@@ -392,7 +383,9 @@ h1, h2, h3 {
 .theme-toggle svg { width: 18px; height: 18px; }
 
 .app-content {
-  padding: var(--space-4) var(--space-5) calc(80px + env(safe-area-inset-bottom) + var(--space-6));
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-5) calc(72px + env(safe-area-inset-bottom) + 20px);
   width: 100%;
 }
 
@@ -533,7 +526,7 @@ h1, h2, h3 {
 
 .fab {
   position: fixed;
-  bottom: calc(80px + var(--space-3) + env(safe-area-inset-bottom));
+  bottom: calc(64px + env(safe-area-inset-bottom) + var(--space-3));
   right: calc(50% - min(480px, 100vw) / 2 + var(--space-5));
   width: 56px; height: 56px;
   background: var(--text-primary);
@@ -543,7 +536,7 @@ h1, h2, h3 {
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-lg);
-  z-index: 101;
+  z-index: 85;
   transition: transform var(--duration) var(--ease);
 }
 .fab:hover { transform: scale(1.05); }
@@ -557,12 +550,12 @@ h1, h2, h3 {
 /* FAB menu (options that pop up) */
 .fab-menu {
   position: fixed;
-  bottom: calc(80px + var(--space-3) + env(safe-area-inset-bottom) + 56px + var(--space-3));
+  bottom: calc(64px + env(safe-area-inset-bottom) + 56px + var(--space-3));
   right: calc(50% - min(480px, 100vw) / 2 + var(--space-5));
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  z-index: 101;
+  z-index: 85;
   align-items: flex-end;
 }
 .fab-menu.hidden {
@@ -697,18 +690,17 @@ h1, h2, h3 {
 
 .bottom-nav {
   position: fixed;
-  bottom: 0;
   left: 0;
   right: 0;
-  width: 100%;
+  bottom: 0;
   max-width: 480px;
   margin: 0 auto;
   background: var(--bg-primary);
   border-top: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-around;
-  padding: var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom));
-  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 80;
 }
 @media (min-width: 768px) {
   .bottom-nav { max-width: 520px; }
@@ -719,7 +711,7 @@ h1, h2, h3 {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: var(--space-2);
+  padding: 10px 4px;
   color: var(--text-tertiary);
   font-size: 0.625rem;
   font-weight: 500;
@@ -787,7 +779,7 @@ h1, h2, h3 {
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
   border-top: 1px solid var(--border-subtle);
-  z-index: 101;
+  z-index: 130;
   transition: transform 300ms var(--ease-out);
   max-height: 90vh;
   display: flex;
@@ -923,7 +915,7 @@ h1, h2, h3 {
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--duration) var(--ease);
-  z-index: 90;
+  z-index: 110;
 }
 .more-overlay.active {
   opacity: 1;
@@ -934,14 +926,14 @@ h1, h2, h3 {
   bottom: 0;
   left: 0;
   right: 0;
-  max-width: 500px;
+  max-width: 480px;
   margin: 0 auto;
   background: var(--bg-secondary);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   padding: var(--space-3) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom));
   transform: translateY(100%);
   transition: transform var(--duration-md) var(--ease);
-  z-index: 95;
+  z-index: 120;
   border-top: 1px solid var(--border-default);
 }
 .more-drawer.active {
@@ -3088,7 +3080,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 07 · May 25, 2026</div>
+          <div class="app-version">Version 08 · May 25, 2026</div>
         </div>
       </div>
     </section>
