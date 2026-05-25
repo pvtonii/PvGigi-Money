@@ -88,7 +88,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.01em;
   line-height: 1.5;
-  min-height: 100dvh;
+  min-height: 100vh;
   margin: 0;
   overflow-x: hidden;
 }
@@ -111,7 +111,7 @@ h1, h2, h3 {
 /* Login screen centers its content in the viewport */
 #screen-login.active {
   display: flex;
-  min-height: 100dvh;
+  min-height: 100vh;
 }
 
 /* LOGIN */
@@ -693,17 +693,24 @@ h1, h2, h3 {
   left: 0;
   right: 0;
   bottom: 0;
-  max-width: 480px;
-  margin: 0 auto;
+  z-index: 80;
   background: var(--bg-primary);
   border-top: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-around;
   padding-bottom: env(safe-area-inset-bottom);
-  z-index: 80;
 }
-@media (min-width: 768px) {
-  .bottom-nav { max-width: 520px; }
+/* On wide screens center the bar without breaking position:fixed
+   (margin:auto doesn't work with fixed; use left:50% + translateX) */
+@media (min-width: 481px) {
+  .bottom-nav {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    border-radius: 14px 14px 0 0;
+  }
 }
 .nav-item {
   flex: 1;
@@ -926,8 +933,6 @@ h1, h2, h3 {
   bottom: 0;
   left: 0;
   right: 0;
-  max-width: 480px;
-  margin: 0 auto;
   background: var(--bg-secondary);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   padding: var(--space-3) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom));
@@ -938,6 +943,18 @@ h1, h2, h3 {
 }
 .more-drawer.active {
   transform: translateY(0);
+}
+@media (min-width: 481px) {
+  .more-drawer {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) translateY(100%);
+    width: 100%;
+    max-width: 480px;
+  }
+  .more-drawer.active {
+    transform: translateX(-50%) translateY(0);
+  }
 }
 .more-handle {
   width: 40px;
@@ -3080,7 +3097,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 08 · May 25, 2026</div>
+          <div class="app-version">Version 09 · May 25, 2026</div>
         </div>
       </div>
     </section>
