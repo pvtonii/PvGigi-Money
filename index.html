@@ -79,7 +79,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow-x: hidden; }
+html { overflow-x: hidden; }
 body {
   font-family: var(--font-body);
   background: var(--bg-primary);
@@ -88,16 +88,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.01em;
   line-height: 1.5;
-  max-width: 500px;
-  margin: 0 auto;
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: hidden;
 }
 
-/* When user rotates phone to landscape, app stays portrait-locked visually */
-@media (orientation: landscape) and (max-height: 500px) {
-  body {
-    max-width: 100vh;
-  }
-}
 button, input, select, textarea { font-family: inherit; color: inherit; font-size: 1rem; }
 button { background: none; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 input, select, textarea { background: none; border: none; outline: none; }
@@ -111,8 +106,13 @@ h1, h2, h3 {
 .text-display { font-family: var(--font-display); letter-spacing: -0.03em; }
 .text-mono { font-variant-numeric: tabular-nums; }
 
-.screen { display: none; min-height: 100vh; min-height: 100dvh; }
-.screen.active { display: flex; }
+.screen { display: none; }
+.screen.active { display: block; }
+/* Login screen centers its content in the viewport */
+#screen-login.active {
+  display: flex;
+  min-height: 100dvh;
+}
 
 /* LOGIN */
 #screen-login {
@@ -261,13 +261,15 @@ h1, h2, h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-5) var(--space-5) var(--space-4);
+  padding: calc(var(--space-5) + env(safe-area-inset-top)) var(--space-5) var(--space-4);
   background: var(--bg-primary);
   position: sticky;
   top: 0;
   z-index: 10;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  max-width: 500px;
+  margin: 0 auto;
 }
 .header-title-wrap {
   display: flex;
@@ -396,17 +398,15 @@ h1, h2, h3 {
 .theme-toggle svg { width: 18px; height: 18px; }
 
 .app-content {
-  flex: 1;
-  padding: var(--space-4) var(--space-5) calc(80px + var(--space-5));
-  overflow-y: auto;
+  padding: var(--space-4) var(--space-5) calc(80px + env(safe-area-inset-bottom) + var(--space-6));
   width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .page { display: none; }
 .page.active {
   display: block;
-  /* Space at bottom so FAB and bottom nav don't cover content */
-  padding-bottom: calc(80px + 56px + var(--space-6) + env(safe-area-inset-bottom));
 }
 
 .card {
@@ -542,7 +542,7 @@ h1, h2, h3 {
 .fab {
   position: fixed;
   bottom: calc(80px + var(--space-3) + env(safe-area-inset-bottom));
-  right: var(--space-5);
+  right: calc(50% - min(500px, 100vw) / 2 + var(--space-5));
   width: 56px; height: 56px;
   background: var(--text-primary);
   color: var(--bg-primary);
@@ -566,7 +566,7 @@ h1, h2, h3 {
 .fab-menu {
   position: fixed;
   bottom: calc(80px + var(--space-3) + env(safe-area-inset-bottom) + 56px + var(--space-3));
-  right: var(--space-5);
+  right: calc(50% - min(500px, 100vw) / 2 + var(--space-5));
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -3097,7 +3097,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 04 · May 17, 2026</div>
+          <div class="app-version">Version 05 · May 17, 2026</div>
         </div>
       </div>
     </section>
