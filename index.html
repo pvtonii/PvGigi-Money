@@ -534,7 +534,7 @@ h1, h2, h3 {
 .fab {
   position: fixed;
   bottom: calc(80px + var(--space-3) + env(safe-area-inset-bottom));
-  right: calc(50% - min(500px, 100vw) / 2 + var(--space-5));
+  right: calc(50% - min(480px, 100vw) / 2 + var(--space-5));
   width: 56px; height: 56px;
   background: var(--text-primary);
   color: var(--bg-primary);
@@ -543,7 +543,7 @@ h1, h2, h3 {
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-lg);
-  z-index: 16;
+  z-index: 101;
   transition: transform var(--duration) var(--ease);
 }
 .fab:hover { transform: scale(1.05); }
@@ -558,11 +558,11 @@ h1, h2, h3 {
 .fab-menu {
   position: fixed;
   bottom: calc(80px + var(--space-3) + env(safe-area-inset-bottom) + 56px + var(--space-3));
-  right: calc(50% - min(500px, 100vw) / 2 + var(--space-5));
+  right: calc(50% - min(480px, 100vw) / 2 + var(--space-5));
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  z-index: 15;
+  z-index: 101;
   align-items: flex-end;
 }
 .fab-menu.hidden {
@@ -708,7 +708,7 @@ h1, h2, h3 {
   display: flex;
   justify-content: space-around;
   padding: var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom));
-  z-index: 20;
+  z-index: 100;
 }
 @media (min-width: 768px) {
   .bottom-nav { max-width: 520px; }
@@ -3088,7 +3088,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 06 · May 17, 2026</div>
+          <div class="app-version">Version 07 · May 25, 2026</div>
         </div>
       </div>
     </section>
@@ -3122,65 +3122,64 @@ html { scroll-behavior: smooth; }
       <div id="insights-page-content"></div>
     </section>
   </main>
-
-  <!-- FAB backdrop (closes menu when clicking outside) -->
-  <div class="fab-backdrop" id="fab-backdrop"></div>
-
-  <!-- FAB menu (expanded options) -->
-  <div class="fab-menu hidden" id="fab-menu">
-    <button class="fab-menu-item" data-fab-action="transaction">
-      <span class="fab-menu-icon">💸</span>
-      <span class="fab-menu-label">Transaction</span>
-    </button>
-    <button class="fab-menu-item" data-fab-action="transfer">
-      <span class="fab-menu-icon">↔️</span>
-      <span class="fab-menu-label">Transfer</span>
-    </button>
-  </div>
-  <button class="fab" id="fab-add" aria-label="Add">
-    <svg viewBox="0 0 24 24" fill="none" id="fab-icon">
-      <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </svg>
-  </button>
-
-  <nav class="bottom-nav">
-    <button class="nav-item active" data-page="dashboard">
-      <svg viewBox="0 0 24 24" fill="none">
-        <rect x="3" y="3" width="7" height="9" rx="1" stroke="currentColor"/>
-        <rect x="14" y="3" width="7" height="5" rx="1" stroke="currentColor"/>
-        <rect x="14" y="12" width="7" height="9" rx="1" stroke="currentColor"/>
-        <rect x="3" y="16" width="7" height="5" rx="1" stroke="currentColor"/>
-      </svg>
-      <span>Home</span>
-    </button>
-    <button class="nav-item" data-page="transactions">
-      <svg viewBox="0 0 24 24" fill="none">
-        <path d="M7 8h10M7 8l3-3m-3 3l3 3M17 16H7m10 0l-3-3m3 3l-3 3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span>Activity</span>
-    </button>
-    <button class="nav-item" data-page="cards">
-      <svg viewBox="0 0 24 24" fill="none">
-        <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor"/>
-        <path d="M3 10h18" stroke="currentColor"/>
-      </svg>
-      <span>Cards</span>
-    </button>
-    <button class="nav-item" data-page="calendar">
-      <svg viewBox="0 0 24 24" fill="none">
-        <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor"/>
-        <path d="M8 3v4M16 3v4M3 10h18" stroke="currentColor" stroke-linecap="round"/>
-      </svg>
-      <span>Calendar</span>
-    </button>
-    <button class="nav-item" id="nav-more-btn">
-      <svg viewBox="0 0 24 24" fill="none">
-        <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <span>More</span>
-    </button>
-  </nav>
 </div>
+
+<!-- FAB + Nav live OUTSIDE #screen-app so position:fixed anchors to the real viewport (iOS PWA fix) -->
+<div class="fab-backdrop" id="fab-backdrop"></div>
+
+<div class="fab-menu hidden" id="fab-menu">
+  <button class="fab-menu-item" data-fab-action="transaction">
+    <span class="fab-menu-icon">💸</span>
+    <span class="fab-menu-label">Transaction</span>
+  </button>
+  <button class="fab-menu-item" data-fab-action="transfer">
+    <span class="fab-menu-icon">↔️</span>
+    <span class="fab-menu-label">Transfer</span>
+  </button>
+</div>
+<button class="fab" id="fab-add" aria-label="Add">
+  <svg viewBox="0 0 24 24" fill="none" id="fab-icon">
+    <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+</button>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" data-page="dashboard">
+    <svg viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="3" width="7" height="9" rx="1" stroke="currentColor"/>
+      <rect x="14" y="3" width="7" height="5" rx="1" stroke="currentColor"/>
+      <rect x="14" y="12" width="7" height="9" rx="1" stroke="currentColor"/>
+      <rect x="3" y="16" width="7" height="5" rx="1" stroke="currentColor"/>
+    </svg>
+    <span>Home</span>
+  </button>
+  <button class="nav-item" data-page="transactions">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M7 8h10M7 8l3-3m-3 3l3 3M17 16H7m10 0l-3-3m3 3l-3 3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>Activity</span>
+  </button>
+  <button class="nav-item" data-page="cards">
+    <svg viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor"/>
+      <path d="M3 10h18" stroke="currentColor"/>
+    </svg>
+    <span>Cards</span>
+  </button>
+  <button class="nav-item" data-page="calendar">
+    <svg viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor"/>
+      <path d="M8 3v4M16 3v4M3 10h18" stroke="currentColor" stroke-linecap="round"/>
+    </svg>
+    <span>Calendar</span>
+  </button>
+  <button class="nav-item" id="nav-more-btn">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <span>More</span>
+  </button>
+</nav>
 
 <!-- More drawer (bottom sheet) -->
 <div class="more-overlay" id="more-overlay"></div>
@@ -4231,6 +4230,11 @@ document.getElementById('modal-close').addEventListener('click', () => Modal.clo
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + name).classList.add('active');
+  // Nav + FAB only visible inside the app (not on login)
+  const showChrome = name === 'app';
+  document.querySelectorAll('.bottom-nav, .fab').forEach(el => {
+    el.style.display = showChrome ? '' : 'none';
+  });
 }
 
 const PAGE_TITLES = {
