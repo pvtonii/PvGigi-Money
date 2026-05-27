@@ -2613,7 +2613,7 @@ h1, h2, h3 {
   flex-shrink: 0;
 }
 .cal-dot.due       { background: #f87171; }  /* red — card vencendo */
-.cal-dot.closing   { background: #a78bfa; }  /* purple — card fechando */
+.cal-dot.closing   { background: #fb923c; }  /* orange — card fechando */
 .cal-dot.income    { background: #4ade80; }  /* green — receita */
 .cal-dot.subscription { background: #fbbf24; } /* yellow — sub no cartão */
 .cal-dot.expense   { background: #60a5fa; }  /* blue — recurring expense */
@@ -5445,7 +5445,7 @@ function openTransactionForm(transaction = null) {
   };
 
   // Source: 'account' ou 'card'
-  const initialSource = t.card_id ? 'card' : 'account';
+  const initialSource = t.card_id ? 'card' : (isEdit ? 'account' : 'card');
 
   Modal.open(isEdit ? 'Edit transaction' : 'New transaction', `
     <!-- Tipo -->
@@ -5462,17 +5462,6 @@ function openTransactionForm(transaction = null) {
     <div class="form-field">
       <label class="form-label">Description</label>
       <input class="form-input" id="tx-description" value="${escapeHtml(t.description || '')}" placeholder="e.g. Coffee at Starbucks">
-    </div>
-
-    <!-- Tags -->
-    <div class="form-field">
-      <label class="form-label">Tags <span style="color:var(--text-tertiary);font-weight:400;">(optional)</span></label>
-      <div class="tag-input-wrap">
-        <div class="tag-chips" id="tx-tag-chips"></div>
-        <input class="form-input" id="tx-tag-input" placeholder="#lasvegas2025, #work… type # and pick" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <div class="tag-suggestions" id="tx-tag-suggestions" style="display:none;"></div>
-      </div>
-      <div class="form-hint">Group expenses across categories — e.g. a trip, a project, an event.</div>
     </div>
 
     <!-- Categoria -->
@@ -5515,6 +5504,15 @@ function openTransactionForm(transaction = null) {
       <div class="form-field">
         <label class="form-label">Date</label>
         <input class="form-input" id="tx-date" type="date" value="${t.date}">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Tags <span style="color:var(--text-tertiary);font-weight:400;">(optional)</span></label>
+        <div class="tag-input-wrap">
+          <div class="tag-chips" id="tx-tag-chips"></div>
+          <input class="form-input" id="tx-tag-input" placeholder="#lasvegas2025, #work… type # and pick" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <div class="tag-suggestions" id="tx-tag-suggestions" style="display:none;"></div>
+        </div>
+        <div class="form-hint">Group expenses across categories — e.g. a trip, a project, an event.</div>
       </div>
       ${isEdit ? `
         <div class="audit-info">
@@ -7525,12 +7523,13 @@ const Dashboard = {
     const pendingRec = this.calcRecurrencesPending();
 
     // End of month projection:
-    //   Today balance
+    //   Liquid balance (checking/cash only, no savings — savings moves via explicit transfers)
     //   - card statements due this month (already counted in dueThisMonth)
     //   - pending account-based subscriptions (they'll hit the account directly)
     //   + pending recurring income (will be deposited)
     //   (card-based subscriptions are already inside future invoices, don't double-count)
-    const projected = today - dueThisMonth - pendingRec.accountExpense + pendingRec.income;
+    const liquidBalance = this.calcLiquidBalance();
+    const projected = liquidBalance - dueThisMonth - pendingRec.accountExpense + pendingRec.income;
 
     const monthStats = this.calcMonthStats();
     const byOwner = this.calcByOwner();
@@ -7754,6 +7753,24 @@ const Dashboard = {
     });
     State.transactions.forEach(t => {
       if (!t.account_id || t.card_id) return;
+      const v = Number(t.amount) || 0;
+      total += (t.type === 'income' ? v : -v);
+    });
+    return total;
+  },
+
+  // Like calcTodayBalance but excludes savings accounts — used for End of Month projection
+  // so that money parked in Savings doesn't inflate the forecast (transfers in/out are intentional)
+  calcLiquidBalance() {
+    let total = 0;
+    State.accounts.forEach(a => {
+      if (a.type === 'savings') return;
+      total += Number(a.initial_balance) || 0;
+    });
+    State.transactions.forEach(t => {
+      if (!t.account_id || t.card_id) return;
+      const acc = State.accounts.find(ac => ac.id === t.account_id);
+      if (acc && acc.type === 'savings') return;
       const v = Number(t.amount) || 0;
       total += (t.type === 'income' ? v : -v);
     });
