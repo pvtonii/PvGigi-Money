@@ -3178,7 +3178,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 31 · May 28, 2026</div>
+          <div class="app-version">Version 32 · May 28, 2026</div>
         </div>
       </div>
     </section>
@@ -5517,7 +5517,7 @@ const Transactions = {
     const refundBadge = isRefund
       ? '<span class="type-badge refund">↩ Refund</span>'
       : hasRefund
-        ? '<span class="type-badge returned">↩ Returned</span>'
+        ? '<span class="type-badge returned">↩ Refunded</span>'
         : '';
     const secondLine = catBadge || tagsBadges || refundBadge
       ? `<div class="tx-meta tx-meta-sub">
@@ -5780,7 +5780,7 @@ function openTransactionForm(transaction = null) {
 
     <div class="flex gap-3" style="margin-top: var(--space-5);">
       ${isEdit ? `<button class="btn btn-danger" id="tx-delete">Delete</button>` : ''}
-      ${isEdit && !t.is_refund ? `<button class="btn btn-secondary" id="tx-return">↩ Return</button>` : ''}
+      ${isEdit && !t.is_refund ? `<button class="btn btn-secondary" id="tx-return">↩ Refund</button>` : ''}
       <button class="btn btn-primary" id="tx-save">${isEdit ? 'Save' : 'Add'}</button>
     </div>
   `);
@@ -6442,7 +6442,7 @@ function openRefundForm(originalTx) {
   const today = new Date().toISOString().split('T')[0];
   const defaultDesc = `Return: ${originalTx.description || ''}`.trim();
 
-  Modal.open('Return / Refund', `
+  Modal.open('Refund', `
     <div style="margin-bottom:var(--space-3);">
       <span class="type-badge ${typeBadgeClass}">${typeBadgeLabel}</span>
       <span style="font-size:0.75rem;color:var(--text-tertiary);margin-left:var(--space-2);">→ ${escapeHtml(sourceLabel)}</span>
@@ -7654,9 +7654,10 @@ const Cards = {
         dueDateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       }
 
-      // Next closing date for the open cycle
-      const closingDate = Invoice.nextClosingDate(card);
-      const closingLabel = this.formatShortDate(closingDate);
+      // Due date of the forming (open) invoice
+      const [oy, omo] = openMonth.split('-').map(Number);
+      const openDueDate = new Date(oy, omo - 1, Number(card.due_day));
+      const openDueDateLabel = openDueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
       const used = Invoice.getCreditUsed(card.id);
       const limit = Number(card.credit_limit) || 0;
@@ -7664,9 +7665,7 @@ const Cards = {
       const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
       const colorClass = pct < 60 ? 'low' : pct < 85 ? 'medium' : 'high';
 
-      const formingLine = openAmount > 0
-        ? `<div class="card-item-meta">${App.formatCurrency(openAmount)} forming · closes ${closingLabel}</div>`
-        : '';
+      const formingLine = `<div class="card-item-meta">Forming ${App.formatCurrency(openAmount)} · ${openDueDateLabel}</div>`;
 
       return `
         <div class="card-item" data-open-card="${card.id}">
