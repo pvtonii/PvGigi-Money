@@ -3151,7 +3151,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 27 · May 28, 2026</div>
+          <div class="app-version">Version 28 · May 28, 2026</div>
         </div>
       </div>
     </section>
@@ -7992,12 +7992,15 @@ const Dashboard = {
   upcomingCardRow(card) {
     const m = Invoice.getNextUnpaidInvoice(card.id);
     const amount = Math.max(0, Invoice.getInvoiceTotal(card.id, m) - Invoice.getInvoicePaid(card.id, m));
+    const [y, mo] = m.split('-').map(Number);
+    const dueDate = new Date(y, mo - 1, Number(card.due_day));
+    const dueDateLabel = dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     return `
       <div class="upcoming-row">
         <div class="upcoming-icon">💳</div>
         <div class="upcoming-info">
           <div class="upcoming-name">${escapeHtml(card.name)}</div>
-          <div class="upcoming-meta">${Invoice.formatMonth(m)}</div>
+          <div class="upcoming-meta">Due ${dueDateLabel}</div>
         </div>
         <div class="upcoming-amount text-danger">-${App.formatCurrency(amount)}</div>
         <button class="upcoming-confirm" data-pay-card="${card.id}">→ Pay</button>
