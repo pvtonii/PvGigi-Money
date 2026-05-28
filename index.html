@@ -3153,7 +3153,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 22 · May 27, 2026</div>
+          <div class="app-version">Version 23 · May 27, 2026</div>
         </div>
       </div>
     </section>
@@ -4758,7 +4758,7 @@ function openCategoryForm(category = null, defaultType = 'expense', defaultParen
     btn.innerHTML = '<span class="loading"></span>';
 
     try {
-      const data = { name, icon: icon || null, type, parent_id: parentId, color: color || null, owner: null, created_by: Auth.getSession()?.userId };
+      const data = { name, icon: icon || null, type, parent_id: parentId, color: color || null, owner: Auth.getSession()?.userId || 'pv', created_by: Auth.getSession()?.userId };
       if (isEdit) {
         await Data.updateCategory(category.id, data);
         toast('Category updated');
