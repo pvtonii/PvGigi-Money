@@ -1828,6 +1828,9 @@ h1, h2, h3 {
   color: var(--bg-primary);
   border-color: var(--text-primary);
 }
+.tx-month-nav { gap: 0; padding: 0; overflow: hidden; }
+.tx-month-nav button { background: none; border: none; color: inherit; font-size: 1rem; cursor: pointer; padding: var(--space-2) var(--space-2); line-height: 1; }
+.tx-month-nav .month-label { font-size: 0.6875rem; font-weight: 600; padding: var(--space-2) var(--space-1); min-width: 72px; text-align: center; cursor: pointer; }
 
 /* Resumo do mês */
 .tx-summary {
@@ -3136,7 +3139,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 16 · May 27, 2026</div>
+          <div class="app-version">Version 17 · May 27, 2026</div>
         </div>
       </div>
     </section>
@@ -3147,6 +3150,11 @@ html { scroll-behavior: smooth; }
         <button class="tx-search-clear" id="tx-search-clear" style="display:none;">✕</button>
       </div>
       <div class="tx-filters">
+        <div class="tx-filter tx-month-nav" id="tx-month-nav">
+          <button data-month-prev>‹</button>
+          <span class="month-label" data-month-label></span>
+          <button data-month-next>›</button>
+        </div>
         <button class="tx-filter active cyclic" data-type-filter="all">
           <span style="font-size:0.6875rem;">All</span>
         </button>
@@ -5186,6 +5194,7 @@ const Transactions = {
   filterType: 'all',     // 'all' | 'income' | 'expense' | 'transfer'
   filterOwner: 'all',    // 'all' | 'pv' | 'gigi' | 'shared'
   filterCategory: 'all', // 'all' | category_id
+  filterMonth: (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); })(),
   searchTerm: '',        // free text search
 
   /** Returns true if this transaction is a transfer (internal or external) */
@@ -5193,8 +5202,28 @@ const Transactions = {
     return !!t.is_transfer || !!t.external_to;
   },
 
+  updateMonthNav() {
+    const nav = document.getElementById('tx-month-nav');
+    if (!nav) return;
+    const label = nav.querySelector('.month-label');
+    if (!label) return;
+    if (this.filterMonth === 'all') {
+      label.textContent = 'All time';
+      nav.classList.remove('active');
+    } else {
+      const [y, m] = this.filterMonth.split('-').map(Number);
+      label.textContent = new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      nav.classList.add('active');
+    }
+  },
+
   render() {
     let txs = State.transactions;
+
+    // Month filter
+    if (this.filterMonth !== 'all') {
+      txs = txs.filter(t => (t.date || '').startsWith(this.filterMonth));
+    }
 
     if (this.filterType === 'all') {
       // pass — show everything
@@ -5260,6 +5289,7 @@ const Transactions = {
     this.renderSummary(txs);
     this.renderList(txs);
     this.populateCategoryFilter();
+    this.updateMonthNav();
   },
 
   populateCategoryFilter() {
@@ -5296,23 +5326,18 @@ const Transactions = {
   },
 
   renderSummary(txs) {
-    // When user is searching or filtering by category, show totals OF THE FILTER (all time)
-    // Otherwise show current month only
-    const isFiltered = (this.searchTerm || '').trim().length > 0 || this.filterCategory !== 'all';
+    const hasSearch = (this.searchTerm || '').trim().length > 0;
+    const hasCatFilter = this.filterCategory !== 'all';
+    const relevantTxs = txs.filter(t => !this.isTransferTx(t) && !t.is_payment);
 
-    let relevantTxs;
     let label;
-    if (isFiltered) {
-      // All-time totals of what's filtered (excluding transfers and payments)
-      relevantTxs = txs.filter(t => !this.isTransferTx(t) && !t.is_payment);
+    if (hasSearch || hasCatFilter) {
       label = `${relevantTxs.length} result${relevantTxs.length === 1 ? '' : 's'}`;
+    } else if (this.filterMonth === 'all') {
+      label = 'All time';
     } else {
-      const today = new Date();
-      const ym = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-      relevantTxs = txs.filter(t =>
-        (t.date || '').startsWith(ym) && !this.isTransferTx(t) && !t.is_payment
-      );
-      label = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const [y, m] = this.filterMonth.split('-').map(Number);
+      label = new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     }
 
     let income = 0, expense = 0;
@@ -8386,6 +8411,34 @@ document.addEventListener('click', (e) => {
     ownerFilter.classList.toggle('active', next !== 'all');
     Transactions.render();
     return;
+  }
+
+  // Month navigation
+  if (e.target.closest('[data-month-prev]')) {
+    const cur = Transactions.filterMonth;
+    if (cur === 'all') {
+      const d = new Date(); Transactions.filterMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    } else {
+      const [y, m] = cur.split('-').map(Number);
+      const prev = new Date(y, m - 2, 1);
+      Transactions.filterMonth = prev.getFullYear() + '-' + String(prev.getMonth() + 1).padStart(2, '0');
+    }
+    Transactions.render(); return;
+  }
+  if (e.target.closest('[data-month-next]')) {
+    const cur = Transactions.filterMonth;
+    if (cur !== 'all') {
+      const [y, m] = cur.split('-').map(Number);
+      const next = new Date(y, m, 1);
+      Transactions.filterMonth = next.getFullYear() + '-' + String(next.getMonth() + 1).padStart(2, '0');
+    }
+    Transactions.render(); return;
+  }
+  if (e.target.closest('[data-month-label]')) {
+    Transactions.filterMonth = Transactions.filterMonth === 'all'
+      ? (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); })()
+      : 'all';
+    Transactions.render(); return;
   }
 
   // Category filter handled by <select> change event below (not click cycle)
