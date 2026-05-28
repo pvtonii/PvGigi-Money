@@ -477,6 +477,21 @@ h1, h2, h3 {
   background: var(--bg-tertiary);
   border-color: var(--border-default);
 }
+/* Category group (parent + children) */
+.cat-group { margin-bottom: var(--space-2); }
+.cat-group-parent { border-radius: var(--radius-md) var(--radius-md) 0 0; margin-bottom: 0; border-bottom-color: transparent; }
+.cat-children { margin-left: var(--space-5); display: flex; flex-direction: column; gap: 2px; }
+.item-row-child { border-radius: 0; border-top: none; }
+.item-row-child:last-child { border-radius: 0 0 var(--radius-md) var(--radius-md); }
+.cat-add-sub-btn {
+  padding: var(--space-2); border-radius: var(--radius-full);
+  color: var(--text-tertiary); transition: all var(--duration); flex-shrink: 0;
+}
+.cat-add-sub-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+.cat-color-swatch {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; vertical-align: middle; margin-left: 4px;
+}
 .item-icon {
   width: 36px; height: 36px;
   border-radius: var(--radius-md);
@@ -854,6 +869,24 @@ h1, h2, h3 {
   margin-bottom: var(--space-2);
   contain: layout style;
 }
+/* Hierarchical category picker */
+.picker-parent-section { margin-bottom: var(--space-2); }
+.picker-parent-header {
+  display: flex; align-items: center;
+  font-size: 0.75rem; font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: var(--space-2) var(--space-1);
+  cursor: pointer; user-select: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration);
+  gap: var(--space-2);
+}
+.picker-parent-header:hover { background: var(--bg-hover); }
+.picker-parent-arrow { font-size: 0.75rem; margin-left: auto; display: inline-block; transition: transform var(--duration); }
+.picker-parent-arrow.open { transform: rotate(0deg); }
+.picker-parent-arrow:not(.open) { transform: rotate(-90deg); }
+.picker-child-grid { margin-top: var(--space-1); padding-left: var(--space-2); }
 
 .form-field {
   display: flex;
@@ -1097,6 +1130,9 @@ h1, h2, h3 {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
+.topcat-subs { display: flex; gap: var(--space-3); margin-top: 2px; flex-wrap: wrap; }
+.topcat-sub { font-size: 0.6875rem; color: var(--text-tertiary); }
+.topcat-sub-amt { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 
 /* Stacked bar chart (6-month comparison) */
 .stack-chart {
@@ -1897,6 +1933,7 @@ h1, h2, h3 {
   gap: var(--space-2);
   flex-wrap: wrap;
 }
+.meta-cat { font-size: 0.6875rem; font-weight: 500; color: var(--text-secondary); }
 .tx-amount {
   font-family: var(--font-display);
   font-size: 1rem;
@@ -3098,7 +3135,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 11 · May 27, 2026</div>
+          <div class="app-version">Version 12 · May 27, 2026</div>
         </div>
       </div>
     </section>
@@ -3345,6 +3382,23 @@ const State = {
   transactions: [],
   subscriptions: [],
 };
+
+// ── Category hierarchy helpers ────────────────────────────────────────────────
+function parentCategories(type) {
+  return State.categories.filter(c => c.parent_id == null && c.type === type);
+}
+function childCategories(parentId) {
+  return State.categories.filter(c => c.parent_id === parentId);
+}
+function categoryPath(categoryId) {
+  if (!categoryId) return { parent: null, child: null };
+  const cat = State.categories.find(c => c.id === categoryId);
+  if (!cat) return { parent: null, child: null };
+  if (cat.parent_id == null) return { parent: cat, child: null };
+  const parent = State.categories.find(c => c.id === cat.parent_id) || null;
+  return { parent, child: cat };
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 /* ============================================
    AUTH
@@ -4390,25 +4444,36 @@ const Settings = {
   },
 
   renderCategories() {
-    const expense = State.categories.filter(c => c.type === 'expense');
-    const income = State.categories.filter(c => c.type === 'income');
-
-    document.getElementById('list-categories-expense').innerHTML =
-      expense.length ? expense.map(c => this.categoryRow(c)).join('') : this.emptyMsg('No expense categories yet');
-
-    document.getElementById('list-categories-income').innerHTML =
-      income.length ? income.map(c => this.categoryRow(c)).join('') : this.emptyMsg('No income categories yet');
+    ['expense', 'income'].forEach(type => {
+      const listId = type === 'expense' ? 'list-categories-expense' : 'list-categories-income';
+      const el = document.getElementById(listId);
+      const parents = parentCategories(type);
+      el.innerHTML = parents.length
+        ? parents.map(p => this.categoryGroup(p)).join('')
+        : this.emptyMsg(`No ${type} categories yet`);
+    });
   },
 
-  categoryRow(c) {
+  categoryGroup(parent) {
+    const children = childCategories(parent.id);
+    const colorStyle = parent.color ? `background:${parent.color}22;color:${parent.color};` : '';
+    const colorSwatch = parent.color ? `<span class="cat-color-swatch" style="background:${parent.color};"></span>` : '';
+    const childRows = children.map(ch => `
+      <div class="item-row item-row-child" data-edit-category="${ch.id}">
+        <div class="item-icon" style="${colorStyle}">${ch.icon || '•'}</div>
+        <div class="item-info"><div class="item-name">${escapeHtml(ch.name)}</div></div>
+      </div>`).join('');
     return `
-      <div class="item-row" data-edit-category="${c.id}">
-        <div class="item-icon" style="${c.color ? `background:${c.color}22;color:${c.color};` : ''}">${c.icon || '•'}</div>
-        <div class="item-info">
-          <div class="item-name">${escapeHtml(c.name)}</div>
+      <div class="cat-group">
+        <div class="item-row cat-group-parent" data-edit-category="${parent.id}">
+          <div class="item-icon" style="${colorStyle}">${parent.icon || '•'}</div>
+          <div class="item-info"><div class="item-name">${escapeHtml(parent.name)}${colorSwatch}</div></div>
+          <button class="cat-add-sub-btn" data-add-sub-to="${parent.id}" data-add-sub-type="${parent.type}" title="Add subcategory">
+            <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-linecap="round" stroke-width="2"/></svg>
+          </button>
         </div>
-      </div>
-    `;
+        ${childRows ? `<div class="cat-children">${childRows}</div>` : ''}
+      </div>`;
   },
 
   renderAccounts() {
@@ -4585,18 +4650,28 @@ function getSelectedOwner() {
   return active ? active.dataset.owner : (Auth.getSession()?.userId || 'pv');
 }
 
-function openCategoryForm(category = null, defaultType = 'expense') {
+function openCategoryForm(category = null, defaultType = 'expense', defaultParentId = null) {
   const isEdit = !!category;
-  const c = category || { name: '', icon: '', type: defaultType };
+  const c = category || { name: '', icon: '', type: defaultType, parent_id: defaultParentId, color: '#6b7280' };
+
+  function buildParentOptions(type, selectedParentId) {
+    const parents = parentCategories(type).filter(p => !category || p.id !== category.id);
+    return parents.map(p =>
+      `<option value="${p.id}" ${selectedParentId === p.id ? 'selected' : ''}>${p.icon || ''} ${escapeHtml(p.name)}</option>`
+    ).join('');
+  }
+
+  const initParentId = c.parent_id || '';
+  const hasParent = !!initParentId;
 
   Modal.open(isEdit ? 'Edit category' : 'New category', `
     <div class="form-field">
       <label class="form-label">Name</label>
-      <input class="form-input" id="cat-name" value="${escapeHtml(c.name)}" placeholder="e.g. Food">
+      <input class="form-input" id="cat-name" value="${escapeHtml(c.name)}" placeholder="e.g. Grocery">
     </div>
     <div class="form-field">
       <label class="form-label">Icon (emoji)</label>
-      <input class="form-input" id="cat-icon" value="${escapeHtml(c.icon || '')}" placeholder="e.g. 🍔" maxlength="2">
+      <input class="form-input" id="cat-icon" value="${escapeHtml(c.icon || '')}" placeholder="e.g. 🛒" maxlength="2">
     </div>
     <div class="form-field">
       <label class="form-label">Type</label>
@@ -4605,6 +4680,17 @@ function openCategoryForm(category = null, defaultType = 'expense') {
         <button type="button" data-type="income" class="${c.type === 'income' ? 'active income' : ''}">Income</button>
       </div>
     </div>
+    <div class="form-field">
+      <label class="form-label">Parent category <span style="color:var(--text-tertiary);font-weight:400;">(optional)</span></label>
+      <select class="form-select" id="cat-parent">
+        <option value="">None (top-level)</option>
+        ${buildParentOptions(c.type, initParentId)}
+      </select>
+    </div>
+    <div class="form-field" id="cat-color-field" ${hasParent ? 'style="display:none;"' : ''}>
+      <label class="form-label">Color</label>
+      <input class="form-input" id="cat-color" type="color" value="${escapeHtml(c.color || '#6b7280')}" style="height:48px;padding:4px 8px;cursor:pointer;">
+    </div>
     <div class="flex gap-3" style="margin-top: var(--space-5);">
       ${isEdit ? `<button class="btn btn-danger" id="cat-delete">Delete</button>` : ''}
       <button class="btn btn-primary" id="cat-save">${isEdit ? 'Save' : 'Create'}</button>
@@ -4612,13 +4698,22 @@ function openCategoryForm(category = null, defaultType = 'expense') {
   `);
 
   const typeToggle = document.getElementById('type-toggle');
+  const parentSel = document.getElementById('cat-parent');
+  const colorField = document.getElementById('cat-color-field');
+
   typeToggle.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => {
-      typeToggle.querySelectorAll('button').forEach(b => {
-        b.classList.remove('active', 'expense', 'income');
-      });
+      typeToggle.querySelectorAll('button').forEach(b => b.classList.remove('active', 'expense', 'income'));
       btn.classList.add('active', btn.dataset.type);
+      // Refresh parent options for the new type
+      const opts = buildParentOptions(btn.dataset.type, '');
+      parentSel.innerHTML = '<option value="">None (top-level)</option>' + opts;
+      colorField.style.display = parentSel.value ? 'none' : '';
     });
+  });
+
+  parentSel.addEventListener('change', () => {
+    colorField.style.display = parentSel.value ? 'none' : '';
   });
 
   document.getElementById('cat-save').addEventListener('click', async () => {
@@ -4626,6 +4721,8 @@ function openCategoryForm(category = null, defaultType = 'expense') {
     const name = document.getElementById('cat-name').value.trim();
     const icon = document.getElementById('cat-icon').value.trim();
     const type = document.querySelector('#type-toggle button.active')?.dataset.type || 'expense';
+    const parentId = parentSel.value || null;
+    const color = parentId ? null : (document.getElementById('cat-color')?.value || null);
 
     if (!name) return toast('Please enter a name', 'error');
 
@@ -4633,8 +4730,7 @@ function openCategoryForm(category = null, defaultType = 'expense') {
     btn.innerHTML = '<span class="loading"></span>';
 
     try {
-      // Categories are universal — no owner
-      const data = { name, icon: icon || null, type, owner: null, created_by: Auth.getSession()?.userId };
+      const data = { name, icon: icon || null, type, parent_id: parentId, color: color || null, owner: null, created_by: Auth.getSession()?.userId };
       if (isEdit) {
         await Data.updateCategory(category.id, data);
         toast('Category updated');
@@ -5138,25 +5234,32 @@ const Transactions = {
   populateCategoryFilter() {
     const select = document.getElementById('tx-category-filter');
     if (!select) return;
-    // Only repopulate if categories changed (cheap signature check)
     const sig = State.categories.map(c => c.id).join(',');
     if (select.dataset.sig === sig) {
-      // Just sync selected value
       select.value = this.filterCategory;
       select.classList.toggle('active', this.filterCategory !== 'all');
       return;
     }
     select.dataset.sig = sig;
-    // Build option list — sort alphabetically
-    const sorted = [...State.categories].sort((a, b) =>
-      (a.name || '').localeCompare(b.name || '')
-    );
-    const optionsHtml = ['<option value="all">All categories</option>']
-      .concat(sorted.map(c =>
-        `<option value="${c.id}">${(c.icon || '')} ${escapeHtml(c.name)}</option>`.trim()
-      ))
-      .join('');
-    select.innerHTML = optionsHtml;
+    let html = '<option value="all">All categories</option>';
+    ['expense', 'income'].forEach(type => {
+      const parents = parentCategories(type);
+      if (!parents.length) return;
+      html += `<optgroup label="— ${type === 'expense' ? 'Expenses' : 'Income'} —" disabled></optgroup>`;
+      parents.forEach(p => {
+        const children = childCategories(p.id);
+        if (children.length) {
+          html += `<optgroup label="${p.icon || ''} ${escapeHtml(p.name)}">`;
+          children.forEach(ch => {
+            html += `<option value="${ch.id}">${ch.icon || ''} ${escapeHtml(ch.name)}</option>`;
+          });
+          html += '</optgroup>';
+        } else {
+          html += `<option value="${p.id}">${p.icon || ''} ${escapeHtml(p.name)}</option>`;
+        }
+      });
+    });
+    select.innerHTML = html;
     select.value = this.filterCategory;
     select.classList.toggle('active', this.filterCategory !== 'all');
   },
@@ -5273,7 +5376,9 @@ const Transactions = {
       return this.externalTransferRow(t);
     }
 
-    const cat = State.categories.find(c => c.id === t.category_id);
+    const { parent: catParent, child: catChild } = categoryPath(t.category_id);
+    const cat = catChild || catParent;
+    const iconColor = catParent?.color || null;
     const acc = State.accounts.find(a => a.id === t.account_id);
     const card = State.cards.find(c => c.id === t.card_id);
     const sign = t.type === 'income' ? '+' : '-';
@@ -5290,20 +5395,23 @@ const Transactions = {
     const typeBadge = t.type === 'income'
       ? '<span class="type-badge income">↑ Income</span>'
       : '<span class="type-badge expense">↓ Expense</span>';
-    // "by X" only when transaction author differs from the source account/card owner
-    // (so when "PV used Gigi's card" or "PV used the shared card" we see who did it)
     const registeredBy = t.created_by || t.owner;
     const byBadge = (registeredBy && source && registeredBy !== source.owner)
       ? `<span class="meta-by">by ${this.ownerAvatar(registeredBy, 12)}</span>`
       : '';
+    const catLabel = catChild?.name || catParent?.name || null;
+    const catBadge = catLabel
+      ? `<span class="meta-cat" style="${iconColor ? `color:${iconColor};` : ''}">${escapeHtml(catLabel)}</span>`
+      : '';
 
     return `
       <div class="tx-row" data-edit-tx="${t.id}">
-        <div class="tx-icon" style="${cat?.color ? `background:${cat.color}22;` : ''}">${icon}</div>
+        <div class="tx-icon" style="${iconColor ? `background:${iconColor}22;` : ''}">${icon}</div>
         <div class="tx-info">
           <div class="tx-title">${escapeHtml(title)}</div>
           <div class="tx-meta">
             ${typeBadge}
+            ${catBadge ? `<span>·</span>${catBadge}` : ''}
             <span>·</span>
             <span class="meta-source">${escapeHtml(sourceLabel)} ${sourceOwnerAvatar}</span>
             ${installmentBadge ? `<span>·</span>${installmentBadge}` : ''}
@@ -5658,6 +5766,7 @@ function openTransactionForm(transaction = null) {
       btn.classList.add('active', btn.dataset.type);
       selectedType = btn.dataset.type;
       selectedCategoryId = null;
+      expandedParents = new Set();
       // Receita só pode ir pra conta (cartão não recebe entrada)
       if (selectedType === 'income') {
         selectedSource = 'account';
@@ -5810,67 +5919,82 @@ function openTransactionForm(transaction = null) {
   }
 
   let categorySearchTerm = '';
-  let categoryShowAll = false;
+  let expandedParents = new Set();
 
   function renderCategoryPicker() {
-    const allCats = State.categories.filter(c => c.type === selectedType);
     const grid = document.getElementById('tx-category-picker');
     const showAllBtn = document.getElementById('tx-cat-show-all');
+    if (showAllBtn) showAllBtn.style.display = 'none';
 
-    if (!allCats.length) {
-      grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No ${selectedType === 'income' ? 'income' : 'expense'} categories.</div>`;
-      if (showAllBtn) showAllBtn.style.display = 'none';
-      return;
-    }
-
-    // Apply search filter
     const term = (categorySearchTerm || '').trim().toLowerCase();
-    let filtered = allCats;
-    if (term) {
-      filtered = allCats.filter(c => (c.name || '').toLowerCase().includes(term));
-    }
-
-    // Paginate: show first 8 unless showAll
-    const VISIBLE_LIMIT = 8;
     const isSearching = term.length > 0;
-    const shouldPaginate = !categoryShowAll && !isSearching && filtered.length > VISIBLE_LIMIT;
-    let visible = shouldPaginate ? filtered.slice(0, VISIBLE_LIMIT) : filtered;
 
-    // Always include the currently-selected category even if paginated out
-    if (shouldPaginate && selectedCategoryId && !visible.some(c => c.id === selectedCategoryId)) {
-      const sel = filtered.find(c => c.id === selectedCategoryId);
-      if (sel) visible = [sel, ...visible.slice(0, VISIBLE_LIMIT - 1)];
-    }
-
-    if (!visible.length) {
-      grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No matches for "${escapeHtml(term)}"</div>`;
-    } else {
-      grid.innerHTML = visible.map(c => `
-        <div class="picker-item ${c.id === selectedCategoryId ? 'selected' : ''}" data-cat-id="${c.id}">
+    if (isSearching) {
+      // Flat search across all categories of this type
+      const matches = State.categories.filter(c =>
+        c.type === selectedType && (c.name || '').toLowerCase().includes(term)
+      );
+      if (!matches.length) {
+        grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No matches for "${escapeHtml(term)}"</div>`;
+        return;
+      }
+      grid.innerHTML = matches.map(c => {
+        const { parent } = categoryPath(c.id);
+        const color = parent?.color || null;
+        return `<div class="picker-item ${c.id === selectedCategoryId ? 'selected' : ''}" data-cat-id="${c.id}" style="${color ? `border-bottom:2px solid ${color};` : ''}">
           <div class="picker-emoji">${c.icon || '•'}</div>
           <div class="picker-label">${escapeHtml(c.name)}</div>
-        </div>
-      `).join('');
-
-      grid.querySelectorAll('.picker-item').forEach(el => {
-        el.addEventListener('click', () => {
-          selectedCategoryId = el.dataset.catId;
-          grid.querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
-          el.classList.add('selected');
-        });
-      });
-    }
-
-    // Show "Show all" button if paginated
-    if (showAllBtn) {
-      if (shouldPaginate) {
-        const hiddenCount = filtered.length - VISIBLE_LIMIT;
-        showAllBtn.textContent = `Show all categories (${hiddenCount} more)`;
-        showAllBtn.style.display = '';
-      } else {
-        showAllBtn.style.display = 'none';
+        </div>`;
+      }).join('');
+    } else {
+      // Hierarchical mode
+      const parents = parentCategories(selectedType);
+      if (!parents.length) {
+        grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No ${selectedType} categories.</div>`;
+        return;
       }
+      // Auto-expand parent of the currently-selected category
+      if (selectedCategoryId) {
+        const { parent } = categoryPath(selectedCategoryId);
+        if (parent) expandedParents.add(parent.id);
+      }
+      grid.innerHTML = parents.map(parent => {
+        const children = childCategories(parent.id);
+        const isExpanded = expandedParents.has(parent.id);
+        const color = parent.color;
+        const colorDot = color ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>` : '';
+        const arrow = `<span class="picker-parent-arrow ${isExpanded ? 'open' : ''}">▾</span>`;
+        let childGrid = '';
+        if (isExpanded) {
+          const items = children.length ? children : [parent];
+          childGrid = `<div class="picker-grid picker-child-grid">${items.map(ch => `
+            <div class="picker-item ${ch.id === selectedCategoryId ? 'selected' : ''}" data-cat-id="${ch.id}" style="${color ? `border-bottom:2px solid ${color};` : ''}">
+              <div class="picker-emoji">${ch.icon || '•'}</div>
+              <div class="picker-label">${escapeHtml(ch.name)}</div>
+            </div>`).join('')}</div>`;
+        }
+        return `<div class="picker-parent-section">
+          <div class="picker-parent-header" data-toggle-parent="${parent.id}">${colorDot}${escapeHtml(parent.name)}${arrow}</div>
+          ${childGrid}
+        </div>`;
+      }).join('');
     }
+
+    // Bind events
+    grid.querySelectorAll('[data-toggle-parent]').forEach(el => {
+      el.addEventListener('click', () => {
+        const pid = el.dataset.toggleParent;
+        if (expandedParents.has(pid)) expandedParents.delete(pid);
+        else expandedParents.add(pid);
+        renderCategoryPicker();
+      });
+    });
+    grid.querySelectorAll('.picker-item').forEach(el => {
+      el.addEventListener('click', () => {
+        selectedCategoryId = el.dataset.catId;
+        renderCategoryPicker();
+      });
+    });
   }
 
   function renderSourcePicker() {
@@ -5988,15 +6112,6 @@ function openTransactionForm(transaction = null) {
       renderCategoryPicker();
     });
   }
-  // Bind "Show all categories" button
-  const catShowAllBtn = document.getElementById('tx-cat-show-all');
-  if (catShowAllBtn) {
-    catShowAllBtn.addEventListener('click', () => {
-      categoryShowAll = true;
-      renderCategoryPicker();
-    });
-  }
-
   // Listener pra atualizar aviso quando trocar a data
   document.getElementById('tx-date').addEventListener('change', updateAmbiguousWarning);
 
@@ -6783,21 +6898,25 @@ const Insights = {
   renderTopCategories() {
     const ym = this.currentMonth();
     const txs = this.txsInMonth(ym).filter(t => this.isSpending(t));
-    const totals = {};
+
+    // Aggregate by PARENT category; track children per parent
+    const parentTotals = {};
+    const parentChildren = {};
     txs.forEach(t => {
-      const key = t.category_id || 'uncategorized';
-      totals[key] = (totals[key] || 0) + (Number(t.amount) || 0);
+      const { parent, child } = categoryPath(t.category_id);
+      const pid = parent?.id || 'uncategorized';
+      parentTotals[pid] = (parentTotals[pid] || 0) + (Number(t.amount) || 0);
+      if (child) {
+        if (!parentChildren[pid]) parentChildren[pid] = {};
+        parentChildren[pid][child.id] = (parentChildren[pid][child.id] || 0) + (Number(t.amount) || 0);
+      }
     });
-    const totalSum = Object.values(totals).reduce((s, v) => s + v, 0);
-    const sorted = Object.entries(totals)
-      .map(([id, value]) => {
-        const cat = State.categories.find(c => c.id === id);
-        return {
-          name: cat?.name || 'Uncategorized',
-          icon: cat?.icon || '•',
-          color: cat?.color,
-          value,
-        };
+
+    const totalSum = Object.values(parentTotals).reduce((s, v) => s + v, 0);
+    const sorted = Object.entries(parentTotals)
+      .map(([pid, value]) => {
+        const cat = pid === 'uncategorized' ? null : State.categories.find(c => c.id === pid);
+        return { pid, name: cat?.name || 'Uncategorized', icon: cat?.icon || '•', color: cat?.color || null, value };
       })
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
@@ -6818,6 +6937,12 @@ const Insights = {
         ${sorted.map(c => {
           const pct = totalSum > 0 ? (c.value / totalSum * 100).toFixed(0) : 0;
           const barW = max > 0 ? (c.value / max * 100).toFixed(1) : 0;
+          const topChildren = Object.entries(parentChildren[c.pid] || {})
+            .sort((a, b) => b[1] - a[1]).slice(0, 2)
+            .map(([cid, val]) => {
+              const ch = State.categories.find(x => x.id === cid);
+              return `<span class="topcat-sub">${ch?.icon || ''} ${escapeHtml(ch?.name || '?')} <span class="topcat-sub-amt">${App.formatCurrency(val)}</span></span>`;
+            }).join('');
           return `
             <div class="topcat-row">
               <div class="topcat-icon" style="${c.color ? `background:${c.color}22;color:${c.color};` : ''}">${c.icon}</div>
@@ -6830,6 +6955,7 @@ const Insights = {
                   <div class="topcat-bar-fill" style="width: ${barW}%; ${c.color ? `background:${c.color};` : ''}"></div>
                 </div>
                 <div class="topcat-amount">${App.formatCurrency(c.value)}</div>
+                ${topChildren ? `<div class="topcat-subs">${topChildren}</div>` : ''}
               </div>
             </div>
           `;
@@ -8099,6 +8225,14 @@ document.addEventListener('click', (e) => {
     if (what === 'account') openAccountForm(null);
     if (what === 'card') openCardForm(null);
     if (what === 'subscription') openSubscriptionForm(null, addBtn.dataset.kind || 'subscription');
+    return;
+  }
+
+  const addSubBtn = e.target.closest('[data-add-sub-to]');
+  if (addSubBtn) {
+    const parentId = addSubBtn.dataset.addSubTo;
+    const parentType = addSubBtn.dataset.addSubType || 'expense';
+    openCategoryForm(null, parentType, parentId);
     return;
   }
 
