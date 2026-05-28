@@ -3006,6 +3006,7 @@ html { scroll-behavior: smooth; }
       </div>
 
       <div class="tab-content hidden" id="tab-cards-config">
+        <div id="cards-credit-summary"></div>
         <div class="section-header">
           <span class="section-title">Your cards</span>
           <button class="section-add" data-add="card">
@@ -4418,6 +4419,21 @@ const Settings = {
 
   renderCards() {
     const list = State.cards;
+
+    const pvTotal  = list.filter(c => c.owner === 'pv').reduce((s, c)   => s + (Number(c.credit_limit) || 0), 0);
+    const gigiTotal = list.filter(c => c.owner === 'gigi').reduce((s, c) => s + (Number(c.credit_limit) || 0), 0);
+    document.getElementById('cards-credit-summary').innerHTML = list.length ? `
+      <div style="display:flex;gap:var(--space-3);margin-bottom:var(--space-4);">
+        <div class="dash-card" style="flex:1;margin:0;">
+          <div class="dash-card-label"><span class="user-avatar pv" style="width:14px;height:14px;font-size:0.5rem;display:inline-flex;margin-right:4px;">P</span>PV credit</div>
+          <div class="dash-card-value text-mono" style="font-size:1.125rem;">${App.formatCurrency(pvTotal)}</div>
+        </div>
+        <div class="dash-card" style="flex:1;margin:0;">
+          <div class="dash-card-label"><span class="user-avatar gigi" style="width:14px;height:14px;font-size:0.5rem;display:inline-flex;margin-right:4px;">G</span>Gigi credit</div>
+          <div class="dash-card-value text-mono" style="font-size:1.125rem;">${App.formatCurrency(gigiTotal)}</div>
+        </div>
+      </div>` : '';
+
     document.getElementById('list-cards-config').innerHTML =
       list.length ? list.map(c => this.cardConfigRow(c)).join('') : this.emptyMsg('No cards yet. Add your first!');
   },
