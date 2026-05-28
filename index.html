@@ -3153,7 +3153,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 24 · May 27, 2026</div>
+          <div class="app-version">Version 25 · May 28, 2026</div>
         </div>
       </div>
     </section>
@@ -8119,7 +8119,7 @@ const Dashboard = {
         <div class="dash-card-summary" data-open-card="${card.id}">
           <div class="dash-card-summary-header">
             <div class="dash-card-summary-name">💳 ${escapeHtml(card.name)}</div>
-            <div class="dash-card-summary-amount">${App.formatCurrency(dueNow)}</div>
+            <div class="dash-card-summary-amount">${App.formatCurrency(nextUnpaidAmount)}</div>
           </div>
           <div class="dash-card-summary-meta">
             ${metaText}
