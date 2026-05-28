@@ -3145,7 +3145,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 19 · May 27, 2026</div>
+          <div class="app-version">Version 20 · May 27, 2026</div>
         </div>
       </div>
     </section>
@@ -6057,8 +6057,15 @@ function openTransactionForm(transaction = null) {
     grid.querySelectorAll('[data-toggle-parent]').forEach(el => {
       el.addEventListener('click', () => {
         const pid = el.dataset.toggleParent;
-        if (expandedParents.has(pid)) expandedParents.delete(pid);
-        else expandedParents.add(pid);
+        if (expandedParents.has(pid)) {
+          expandedParents.delete(pid);
+        } else {
+          // Accordion: close all others (keep selected parent open if different)
+          const { parent: selParent } = categoryPath(selectedCategoryId);
+          expandedParents.clear();
+          if (selParent && selParent.id !== pid) expandedParents.add(selParent.id);
+          expandedParents.add(pid);
+        }
         renderCategoryPicker();
       });
     });
