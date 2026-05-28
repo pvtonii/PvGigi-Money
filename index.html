@@ -1739,6 +1739,31 @@ input[type="date"].form-input { -webkit-appearance: none; appearance: none; }
   padding: var(--space-4);
   margin-bottom: var(--space-4);
 }
+.cards-owner-tabs {
+  display: flex;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 3px;
+  margin-bottom: var(--space-4);
+  gap: 2px;
+}
+.cards-owner-tab {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  border: none;
+  background: none;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--duration);
+}
+.cards-owner-tab.active {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
 .best-to-use-header {
   margin-bottom: var(--space-3);
 }
@@ -3151,7 +3176,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 28 · May 28, 2026</div>
+          <div class="app-version">Version 29 · May 28, 2026</div>
         </div>
       </div>
     </section>
@@ -7459,51 +7484,19 @@ const Cards = {
       `;
     }
 
-    // Apply owner filter
-    const filtered = this.filterOwner === 'all'
-      ? State.cards
-      : State.cards.filter(c => c.owner === this.filterOwner);
-
-    // Owner filter chip (cyclic: all → pv → gigi → all)
-    const ownerLabels = { all: 'All cards', pv: 'PV', gigi: 'Gigi' };
-    const filterChip = `
-      <div class="cards-filters">
-        <button class="tx-filter ${this.filterOwner !== 'all' ? 'active' : ''}" data-cards-owner-filter>
-          <span style="font-size:0.6875rem;">${ownerLabels[this.filterOwner]}</span>
-        </button>
-      </div>
-    `;
-
-    if (!filtered.length) {
-      return filterChip + `
-        <div class="empty-state">
-          <div class="empty-state-title">No cards for ${this.filterOwner === 'pv' ? 'PV' : 'Gigi'}</div>
-          <p class="empty-state-text">Try another filter or add cards in <strong>Settings → Cards</strong>.</p>
-        </div>
-      `;
-    }
-
-    // === Best to use today section ===
+    // Best to use today — always uses ALL cards regardless of filter
     const today = new Date();
-    const rankings = filtered
+    const allRankings = State.cards
       .map(card => Invoice.rankCardForToday(card, today))
       .filter(r => r !== null);
-
-    // Sort: just-closed first (longest cycle), then safe by daysToDue desc,
-    // then ambiguous by min days desc, no-credit at the bottom
-    const stateOrder = { 'just-closed': 0, 'safe': 1, 'ambiguous': 2 };
-    rankings.sort((a, b) => {
-      // No credit goes to bottom
+    allRankings.sort((a, b) => {
       if (a.hasNoCredit && !b.hasNoCredit) return 1;
       if (!a.hasNoCredit && b.hasNoCredit) return -1;
-      // Otherwise by ranking metric (days)
       const aDays = a.state === 'ambiguous' ? a.ambiguousRange.min : a.daysToDue;
       const bDays = b.state === 'ambiguous' ? b.ambiguousRange.min : b.daysToDue;
-      return bDays - aDays; // descending — more days = better
+      return bDays - aDays;
     });
-
-    // Show only top 3 in a clean vertical list
-    const top3 = rankings.slice(0, 3);
+    const top3 = allRankings.slice(0, 3);
     const medals = ['🥇', '🥈', '🥉'];
     const bestToUseHtml = top3.length > 1 ? `
       <div class="best-to-use-section">
@@ -7515,6 +7508,28 @@ const Cards = {
         </div>
       </div>
     ` : '';
+
+    // Owner toggle (below best-to-use, filters the card list)
+    const fo = this.filterOwner;
+    const ownerToggleHtml = `
+      <div class="cards-owner-tabs">
+        <button class="cards-owner-tab ${fo === 'all' ? 'active' : ''}" data-cards-owner-filter="all">All</button>
+        <button class="cards-owner-tab ${fo === 'pv'  ? 'active' : ''}" data-cards-owner-filter="pv">PV</button>
+        <button class="cards-owner-tab ${fo === 'gigi' ? 'active' : ''}" data-cards-owner-filter="gigi">Gigi</button>
+      </div>
+    `;
+
+    // Apply owner filter to card list only
+    const filtered = fo === 'all' ? State.cards : State.cards.filter(c => c.owner === fo);
+
+    if (!filtered.length) {
+      return bestToUseHtml + ownerToggleHtml + `
+        <div class="empty-state">
+          <div class="empty-state-title">No cards for ${fo === 'pv' ? 'PV' : 'Gigi'}</div>
+          <p class="empty-state-text">Try another filter or add cards in <strong>Settings → Cards</strong>.</p>
+        </div>
+      `;
+    }
 
     const cardsHtml = filtered.map(card => {
       const todayStr = new Date().toISOString().split('T')[0];
@@ -7533,6 +7548,9 @@ const Cards = {
       const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
       const colorClass = pct < 60 ? 'low' : pct < 85 ? 'medium' : 'high';
 
+      const closingDate = Invoice.nextClosingDate(card);
+      const dueDate = Invoice.nextDueDate(card);
+
       let metaText;
       if (nextUnpaidAmount > 0 && openAmount > 0) {
         metaText = `${App.formatCurrency(nextUnpaidAmount)} due ${Invoice.formatMonth(nextUnpaidMonth)} · ${App.formatCurrency(openAmount)} forming`;
@@ -7548,10 +7566,11 @@ const Cards = {
         <div class="card-item" data-open-card="${card.id}">
           <div class="card-item-header">
             <div class="card-item-info">
-              <div class="card-item-name">💳 ${escapeHtml(card.name)}</div>
+              <div class="card-item-name">💳 ${escapeHtml(card.name)}${card.last_digits ? ` <span style="font-weight:400;color:var(--text-tertiary);">····${escapeHtml(card.last_digits)}</span>` : ''}</div>
               <div class="card-item-meta">
-                ${card.last_digits ? `<span>····${escapeHtml(card.last_digits)}</span><span>·</span>` : ''}
-                <span class="owner-tag ${card.owner}">${this.ownerLabel(card.owner)}</span>
+                <span>Closes ${this.formatShortDate(closingDate)}</span>
+                <span>·</span>
+                <span>Due ${this.formatShortDate(dueDate)}</span>
               </div>
             </div>
             <div style="text-align:right;">
@@ -7573,7 +7592,7 @@ const Cards = {
       `;
     }).join('');
 
-    return filterChip + bestToUseHtml + cardsHtml;
+    return bestToUseHtml + ownerToggleHtml + cardsHtml;
   },
 
   /** Render single card in "Best to use today" ranking */
@@ -8408,10 +8427,7 @@ document.addEventListener('click', (e) => {
   // Cards owner filter (cycle: all → pv → gigi → all)
   const cardsOwnerFilter = e.target.closest('[data-cards-owner-filter]');
   if (cardsOwnerFilter) {
-    const cycle = ['all', 'pv', 'gigi'];
-    const current = Cards.filterOwner;
-    const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
-    Cards.filterOwner = next;
+    Cards.filterOwner = cardsOwnerFilter.dataset.cardsOwnerFilter;
     Cards.render();
     return;
   }
