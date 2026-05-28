@@ -3153,7 +3153,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 23 · May 27, 2026</div>
+          <div class="app-version">Version 24 · May 27, 2026</div>
         </div>
       </div>
     </section>
@@ -4141,6 +4141,16 @@ const Invoice = {
     return State.transactions
       .filter(t => t.is_payment && t.paid_card_id === cardId && t.paid_invoice_month === invoiceMonth)
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  },
+
+  /** Returns the oldest invoice_month with an unpaid balance, or null if none */
+  getNextUnpaidInvoice(cardId) {
+    const months = this.getCardInvoiceMonths(cardId).slice().sort(); // ascending = oldest first
+    return months.find(m => {
+      const total = this.getInvoiceTotal(cardId, m);
+      const paid = this.getInvoicePaid(cardId, m);
+      return total > 0 && paid < total - 0.005;
+    }) || null;
   },
 
   /** Returns 'paid' | 'partial' | 'open' for an invoice */
@@ -7609,7 +7619,7 @@ const Cards = {
     if (!months.includes(currentMonth)) months.unshift(currentMonth);
 
     if (!this.selectedInvoiceMonth || !months.includes(this.selectedInvoiceMonth)) {
-      this.selectedInvoiceMonth = currentMonth;
+      this.selectedInvoiceMonth = Invoice.getNextUnpaidInvoice(card.id) || currentMonth;
     }
 
     const txs = Invoice.getInvoiceTransactions(card.id, this.selectedInvoiceMonth)
@@ -8083,30 +8093,26 @@ const Dashboard = {
       const available = Math.max(0, limit - used);
       const dueNow = Invoice.getCardDueThisMonth(card.id);
 
-      // Open statement = next invoice being formed (charged - paid)
+      // Next unpaid invoice
+      const nextUnpaidMonth = Invoice.getNextUnpaidInvoice(card.id);
+      const nextUnpaidAmount = nextUnpaidMonth ? Math.max(0, Invoice.getInvoiceTotal(card.id, nextUnpaidMonth) - Invoice.getInvoicePaid(card.id, nextUnpaidMonth)) : 0;
+      // Currently forming invoice (open cycle)
       const todayStr = new Date().toISOString().split('T')[0];
-      const nextInvoiceMonth = Invoice.computeMonthString(todayStr, card);
-      const nextCharged = Invoice.getInvoiceTotal(card.id, nextInvoiceMonth);
-      const nextPaid = Invoice.getInvoicePaid(card.id, nextInvoiceMonth);
-      const openStatement = Math.max(0, nextCharged - nextPaid);
-      // Avoid double-showing if next month is the current invoice (same period)
-      const showOpen = openStatement > 0 && nextInvoiceMonth !== (() => {
-        const t = new Date();
-        return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-01';
-      })();
+      const openMonth = Invoice.computeMonthString(todayStr, card);
+      const openAmount = openMonth !== nextUnpaidMonth ? Math.max(0, Invoice.getInvoiceTotal(card.id, openMonth) - Invoice.getInvoicePaid(card.id, openMonth)) : 0;
 
       const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
       const colorClass = pct < 60 ? 'low' : pct < 85 ? 'medium' : 'high';
 
       let metaText;
-      if (dueNow > 0 && showOpen) {
-        metaText = `due this month · ${App.formatCurrency(openStatement)} next`;
-      } else if (dueNow > 0) {
-        metaText = 'due this month';
-      } else if (showOpen) {
-        metaText = `no bill this month · ${App.formatCurrency(openStatement)} forming`;
+      if (nextUnpaidAmount > 0 && openAmount > 0) {
+        metaText = `${App.formatCurrency(nextUnpaidAmount)} due ${Invoice.formatMonth(nextUnpaidMonth)} · ${App.formatCurrency(openAmount)} forming`;
+      } else if (nextUnpaidAmount > 0) {
+        metaText = `${App.formatCurrency(nextUnpaidAmount)} due ${Invoice.formatMonth(nextUnpaidMonth)}`;
+      } else if (openAmount > 0) {
+        metaText = `${App.formatCurrency(openAmount)} forming`;
       } else {
-        metaText = 'no bill this month';
+        metaText = 'no open balance';
       }
 
       return `
