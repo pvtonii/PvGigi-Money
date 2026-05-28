@@ -669,6 +669,8 @@ h1, h2, h3 {
   background: rgba(239, 68, 68, 0.15);
   color: var(--danger);
 }
+.type-badge.refund   { background: rgba(6,182,212,0.15); color: #06b6d4; }
+.type-badge.returned { background: rgba(107,114,128,0.15); color: var(--text-tertiary); }
 
 /* Show all sources button (U3 escape) */
 .show-all-btn {
@@ -3176,7 +3178,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 30 · May 28, 2026</div>
+          <div class="app-version">Version 31 · May 28, 2026</div>
         </div>
       </div>
     </section>
@@ -5510,8 +5512,16 @@ const Transactions = {
     const tagsBadges = (t.tags && t.tags.length)
       ? t.tags.map(tg => `<span class="tx-tag">#${escapeHtml(tg)}</span>`).join('')
       : '';
-    const secondLine = catBadge || tagsBadges
+    const isRefund = !!t.is_refund;
+    const hasRefund = !isRefund && State.transactions.some(r => r.original_tx_id === t.id);
+    const refundBadge = isRefund
+      ? '<span class="type-badge refund">↩ Refund</span>'
+      : hasRefund
+        ? '<span class="type-badge returned">↩ Returned</span>'
+        : '';
+    const secondLine = catBadge || tagsBadges || refundBadge
       ? `<div class="tx-meta tx-meta-sub">
+          ${refundBadge}
           ${catBadge}
           ${tagsBadges}
         </div>`
@@ -5770,6 +5780,7 @@ function openTransactionForm(transaction = null) {
 
     <div class="flex gap-3" style="margin-top: var(--space-5);">
       ${isEdit ? `<button class="btn btn-danger" id="tx-delete">Delete</button>` : ''}
+      ${isEdit && !t.is_refund ? `<button class="btn btn-secondary" id="tx-return">↩ Return</button>` : ''}
       <button class="btn btn-primary" id="tx-save">${isEdit ? 'Save' : 'Add'}</button>
     </div>
   `);
@@ -6373,6 +6384,11 @@ function openTransactionForm(transaction = null) {
   });
 
   if (isEdit) {
+    document.getElementById('tx-return')?.addEventListener('click', () => {
+      Modal.close();
+      openRefundForm(transaction);
+    });
+
     document.getElementById('tx-delete').addEventListener('click', async () => {
       // Se for parcela, perguntar se exclui só ela ou o grupo todo
       if (transaction.installment_group_id && transaction.installments_total > 1) {
@@ -6408,6 +6424,94 @@ function openTransactionForm(transaction = null) {
       }
     });
   }
+}
+
+/* ============================================
+   REFUND FORM — create inverse of a transaction
+   ============================================ */
+function openRefundForm(originalTx) {
+  const refundType = originalTx.type === 'expense' ? 'income' : 'expense';
+  const typeBadgeClass = refundType === 'income' ? 'income' : 'expense';
+  const typeBadgeLabel = refundType === 'income' ? '↑ Income (Refund)' : '↓ Expense (Refund)';
+
+  const source = originalTx.card_id
+    ? State.cards.find(c => c.id === originalTx.card_id)
+    : State.accounts.find(a => a.id === originalTx.account_id);
+  const sourceLabel = source ? `${originalTx.card_id ? '💳' : '🏦'} ${source.name}` : '—';
+
+  const today = new Date().toISOString().split('T')[0];
+  const defaultDesc = `Return: ${originalTx.description || ''}`.trim();
+
+  Modal.open('Return / Refund', `
+    <div style="margin-bottom:var(--space-3);">
+      <span class="type-badge ${typeBadgeClass}">${typeBadgeLabel}</span>
+      <span style="font-size:0.75rem;color:var(--text-tertiary);margin-left:var(--space-2);">→ ${escapeHtml(sourceLabel)}</span>
+    </div>
+
+    <input class="amount-input" id="refund-amount" type="text" inputmode="decimal"
+           placeholder="$0.00" value="${formatAmountInput(originalTx.amount)}" autocomplete="off">
+
+    <div class="form-field">
+      <label class="form-label">Description</label>
+      <input class="form-input" id="refund-desc" value="${escapeHtml(defaultDesc)}">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">Date</label>
+      <input class="form-input" id="refund-date" type="date" value="${today}">
+    </div>
+
+    <div class="flex gap-3" style="margin-top:var(--space-5);">
+      <button class="btn btn-primary" id="refund-save">Create Refund</button>
+    </div>
+  `);
+
+  setTimeout(() => document.getElementById('refund-amount').focus(), 300);
+
+  document.getElementById('refund-save').addEventListener('click', async () => {
+    const btn = document.getElementById('refund-save');
+    const amountStr = document.getElementById('refund-amount').value.replace(/[^0-9.,]/g, '').replace(',', '.');
+    const amount = parseFloat(amountStr);
+    const description = document.getElementById('refund-desc').value.trim();
+    const date = document.getElementById('refund-date').value;
+
+    if (!amount || amount <= 0) return toast('Please enter a valid amount', 'error');
+    if (!date) return toast('Please enter a date', 'error');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span>';
+
+    try {
+      const data = {
+        type: refundType,
+        amount,
+        date,
+        description,
+        account_id: originalTx.account_id || null,
+        card_id: originalTx.card_id || null,
+        category_id: originalTx.category_id || null,
+        owner: originalTx.owner,
+        is_refund: true,
+        original_tx_id: originalTx.id,
+        installments_total: 1,
+        installment_number: 1,
+        created_by: Auth.getSession()?.userId,
+      };
+      if (originalTx.card_id && source) {
+        data.invoice_month = Invoice.computeMonthString(date, source);
+      }
+      await Data.createTransaction(data);
+      toast('Refund created ✓');
+      Modal.close();
+      Transactions.render();
+      Dashboard.render();
+      if (document.getElementById('page-cards').classList.contains('active')) Cards.render();
+    } catch (err) {
+      toast('Error: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Create Refund';
+    }
+  });
 }
 
 // Helper pra formatar valor no input
@@ -6912,7 +7016,7 @@ async function confirmRecurrence(subscriptionId) {
       description: s.name,
       account_id: s.account_id || null,
       card_id: s.card_id || null,
-      category_id: null,
+      category_id: s.category_id || null,
       owner: s.owner,
       installments_total: 1,
       installment_number: 1,
