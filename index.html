@@ -3014,8 +3014,6 @@ html { scroll-behavior: smooth; }
       <!-- Recent activity (last 3 actions) -->
       <div id="dash-recent" class="fade-in"></div>
 
-      <!-- Cartões resumo -->
-      <div class="fade-in" id="dash-cards-summary"></div>
     </section>
 
     <!-- SETTINGS -->
@@ -3153,7 +3151,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 25 · May 28, 2026</div>
+          <div class="app-version">Version 26 · May 28, 2026</div>
         </div>
       </div>
     </section>
@@ -7519,44 +7517,56 @@ const Cards = {
     ` : '';
 
     const cardsHtml = filtered.map(card => {
-      // Fatura aberta = próxima a vencer (já fechou ou vai fechar)
       const todayStr = new Date().toISOString().split('T')[0];
-      const currentInvoice = Invoice.computeMonthString(todayStr, card);
-      const charged = Invoice.getInvoiceTotal(card.id, currentInvoice);
-      const paid = Invoice.getInvoicePaid(card.id, currentInvoice);
-      const total = Math.max(0, charged - paid);
-      const txCount = Invoice.getInvoiceTransactions(card.id, currentInvoice).length;
+      const nextUnpaidMonth = Invoice.getNextUnpaidInvoice(card.id);
+      const nextUnpaidAmount = nextUnpaidMonth
+        ? Math.max(0, Invoice.getInvoiceTotal(card.id, nextUnpaidMonth) - Invoice.getInvoicePaid(card.id, nextUnpaidMonth))
+        : 0;
+      const openMonth = Invoice.computeMonthString(todayStr, card);
+      const openAmount = openMonth !== nextUnpaidMonth
+        ? Math.max(0, Invoice.getInvoiceTotal(card.id, openMonth) - Invoice.getInvoicePaid(card.id, openMonth))
+        : 0;
 
-      const closingDate = Invoice.nextClosingDate(card);
-      const dueDate = Invoice.nextDueDate(card);
+      const used = Invoice.getCreditUsed(card.id);
+      const limit = Number(card.credit_limit) || 0;
+      const available = Math.max(0, limit - used);
+      const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+      const colorClass = pct < 60 ? 'low' : pct < 85 ? 'medium' : 'high';
+
+      let metaText;
+      if (nextUnpaidAmount > 0 && openAmount > 0) {
+        metaText = `${App.formatCurrency(nextUnpaidAmount)} due ${Invoice.formatMonth(nextUnpaidMonth)} · ${App.formatCurrency(openAmount)} forming`;
+      } else if (nextUnpaidAmount > 0) {
+        metaText = `${App.formatCurrency(nextUnpaidAmount)} due ${Invoice.formatMonth(nextUnpaidMonth)}`;
+      } else if (openAmount > 0) {
+        metaText = `${App.formatCurrency(openAmount)} forming`;
+      } else {
+        metaText = 'no open balance';
+      }
 
       return `
         <div class="card-item" data-open-card="${card.id}">
           <div class="card-item-header">
             <div class="card-item-info">
-              <div class="card-item-name">
-                <span>💳 ${escapeHtml(card.name)}</span>
-              </div>
+              <div class="card-item-name">💳 ${escapeHtml(card.name)}</div>
               <div class="card-item-meta">
                 ${card.last_digits ? `<span>····${escapeHtml(card.last_digits)}</span><span>·</span>` : ''}
                 <span class="owner-tag ${card.owner}">${this.ownerLabel(card.owner)}</span>
-                <span>·</span>
-                <span>${txCount} ${txCount === 1 ? 'purchase' : 'purchases'}</span>
               </div>
             </div>
-            <div>
-              <div class="card-item-amount-label">Open statement</div>
-              <div class="card-item-amount">${App.formatCurrency(total)}</div>
+            <div style="text-align:right;">
+              <div class="card-item-amount ${nextUnpaidAmount > 0 ? 'text-danger' : ''}">${App.formatCurrency(nextUnpaidAmount)}</div>
+              <div class="card-item-amount-label">${nextUnpaidMonth ? Invoice.formatMonth(nextUnpaidMonth) : 'no bill'}</div>
             </div>
           </div>
-          <div class="card-dates">
-            <div class="card-date-item">
-              <span class="card-date-label">Closes</span>
-              <span class="card-date-value">${this.formatShortDate(closingDate)}</span>
+          <div class="card-item-meta" style="margin-bottom:var(--space-2);">${metaText}</div>
+          <div class="credit-bar-container">
+            <div class="credit-bar-track">
+              <div class="credit-bar-fill ${colorClass}" style="width:${pct.toFixed(1)}%;"></div>
             </div>
-            <div class="card-date-item">
-              <span class="card-date-label">Due</span>
-              <span class="card-date-value">${this.formatShortDate(dueDate)}</span>
+            <div class="credit-bar-info">
+              <span><strong>${App.formatCurrency(used)}</strong> of ${App.formatCurrency(limit)}</span>
+              <span><strong>${App.formatCurrency(available)}</strong> available</span>
             </div>
           </div>
         </div>
@@ -7757,19 +7767,24 @@ const Dashboard = {
      - Resumo de cartões com barrinhas de crédito */
   render() {
     const today = this.calcTodayBalance();
-    const dueThisMonth = Invoice.getTotalDueThisMonth();
+
+    // Sum of next unpaid invoice for each card (works for all closing/due day combos)
+    const cardsDue = State.cards.reduce((sum, card) => {
+      const m = Invoice.getNextUnpaidInvoice(card.id);
+      if (!m) return sum;
+      return sum + Math.max(0, Invoice.getInvoiceTotal(card.id, m) - Invoice.getInvoicePaid(card.id, m));
+    }, 0);
 
     // Recurrences not yet confirmed this month
     const pendingRec = this.calcRecurrencesPending();
 
     // End of month projection:
-    //   Liquid balance (checking/cash only, no savings — savings moves via explicit transfers)
-    //   - card statements due this month (already counted in dueThisMonth)
-    //   - pending account-based subscriptions (they'll hit the account directly)
-    //   + pending recurring income (will be deposited)
-    //   (card-based subscriptions are already inside future invoices, don't double-count)
+    //   Liquid balance (checking/cash only, no savings)
+    //   - next unpaid card invoices
+    //   - pending account-based subscriptions (hit the account directly)
+    //   + pending recurring income
     const liquidBalance = this.calcLiquidBalance();
-    const projected = liquidBalance - dueThisMonth - pendingRec.accountExpense + pendingRec.income;
+    const projected = liquidBalance - cardsDue - pendingRec.accountExpense + pendingRec.income;
 
     const monthStats = this.calcMonthStats();
 
@@ -7818,7 +7833,7 @@ const Dashboard = {
       document.getElementById('dash-gigi-balance').textContent = App.formatCurrency(byOwner.gigi);
     }
 
-    document.getElementById('dash-due-value').textContent = '-' + App.formatCurrency(dueThisMonth);
+    document.getElementById('dash-due-value').textContent = '-' + App.formatCurrency(cardsDue);
     document.getElementById('dash-projected-value').textContent = App.formatCurrency(projected);
 
     // Cor do "fim do mês"
@@ -7836,14 +7851,12 @@ const Dashboard = {
     document.getElementById('dash-income').textContent = '+' + App.formatCurrency(monthStats.income);
     document.getElementById('dash-expense').textContent = '-' + App.formatCurrency(monthStats.expense);
 
-    // Upcoming recurrences
-    this.renderUpcoming(pendingRec.items);
+    // Upcoming: recurring items + cards with unpaid invoices
+    const pendingCards = State.cards.filter(c => !!Invoice.getNextUnpaidInvoice(c.id));
+    this.renderUpcoming(pendingRec.items, pendingCards);
 
     // Recent activity (last 3 actions)
     this.renderRecent();
-
-    // Cartões com barrinhas
-    this.renderCardsSummary();
   },
 
   /** Renders last 3 actions for current user or filter */
@@ -7938,26 +7951,27 @@ const Dashboard = {
     return { items, accountExpense, income };
   },
 
-  renderUpcoming(items) {
+  renderUpcoming(items, pendingCards = []) {
     const container = document.getElementById('dash-upcoming');
     if (!container) return;
 
-    if (!items.length) {
+    if (!items.length && !pendingCards.length) {
       container.innerHTML = '';
       return;
     }
 
+    const total = items.length + pendingCards.length;
     container.innerHTML = `
       <div class="card upcoming-card fade-in">
         <div class="upcoming-header">
           <span class="upcoming-title">Upcoming this month</span>
-          <span class="upcoming-count">${items.length}</span>
+          <span class="upcoming-count">${total}</span>
         </div>
+        ${pendingCards.map(c => this.upcomingCardRow(c)).join('')}
         ${items.map(s => this.upcomingRow(s)).join('')}
       </div>
     `;
 
-    // Bind confirm buttons
     container.querySelectorAll('[data-confirm-rec]').forEach(btn => {
       btn.addEventListener('click', () => {
         btn.disabled = true;
@@ -7965,6 +7979,22 @@ const Dashboard = {
         confirmRecurrence(btn.dataset.confirmRec);
       });
     });
+  },
+
+  upcomingCardRow(card) {
+    const m = Invoice.getNextUnpaidInvoice(card.id);
+    const amount = Math.max(0, Invoice.getInvoiceTotal(card.id, m) - Invoice.getInvoicePaid(card.id, m));
+    return `
+      <div class="upcoming-row">
+        <div class="upcoming-icon">💳</div>
+        <div class="upcoming-info">
+          <div class="upcoming-name">${escapeHtml(card.name)}</div>
+          <div class="upcoming-meta">${Invoice.formatMonth(m)}</div>
+        </div>
+        <div class="upcoming-amount text-danger">-${App.formatCurrency(amount)}</div>
+        <button class="upcoming-confirm" data-pay-card="${card.id}">→ Pay</button>
+      </div>
+    `;
   },
 
   upcomingRow(s) {
@@ -8080,70 +8110,6 @@ const Dashboard = {
     return { income, expense };
   },
 
-  renderCardsSummary() {
-    const container = document.getElementById('dash-cards-summary');
-    if (!State.cards.length) {
-      container.innerHTML = '';
-      return;
-    }
-
-    const cardsHtml = State.cards.map(card => {
-      const used = Invoice.getCreditUsed(card.id);
-      const limit = Number(card.credit_limit) || 0;
-      const available = Math.max(0, limit - used);
-      const dueNow = Invoice.getCardDueThisMonth(card.id);
-
-      // Next unpaid invoice
-      const nextUnpaidMonth = Invoice.getNextUnpaidInvoice(card.id);
-      const nextUnpaidAmount = nextUnpaidMonth ? Math.max(0, Invoice.getInvoiceTotal(card.id, nextUnpaidMonth) - Invoice.getInvoicePaid(card.id, nextUnpaidMonth)) : 0;
-      // Currently forming invoice (open cycle)
-      const todayStr = new Date().toISOString().split('T')[0];
-      const openMonth = Invoice.computeMonthString(todayStr, card);
-      const openAmount = openMonth !== nextUnpaidMonth ? Math.max(0, Invoice.getInvoiceTotal(card.id, openMonth) - Invoice.getInvoicePaid(card.id, openMonth)) : 0;
-
-      const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
-      const colorClass = pct < 60 ? 'low' : pct < 85 ? 'medium' : 'high';
-
-      let metaText;
-      if (nextUnpaidAmount > 0 && openAmount > 0) {
-        metaText = `${App.formatCurrency(nextUnpaidAmount)} due ${Invoice.formatMonth(nextUnpaidMonth)} · ${App.formatCurrency(openAmount)} forming`;
-      } else if (nextUnpaidAmount > 0) {
-        metaText = `${App.formatCurrency(nextUnpaidAmount)} due ${Invoice.formatMonth(nextUnpaidMonth)}`;
-      } else if (openAmount > 0) {
-        metaText = `${App.formatCurrency(openAmount)} forming`;
-      } else {
-        metaText = 'no open balance';
-      }
-
-      return `
-        <div class="dash-card-summary" data-open-card="${card.id}">
-          <div class="dash-card-summary-header">
-            <div class="dash-card-summary-name">💳 ${escapeHtml(card.name)}</div>
-            <div class="dash-card-summary-amount">${App.formatCurrency(nextUnpaidAmount)}</div>
-          </div>
-          <div class="dash-card-summary-meta">
-            ${metaText}
-          </div>
-          <div class="credit-bar-container">
-            <div class="credit-bar-track">
-              <div class="credit-bar-fill ${colorClass}" style="width: ${pct.toFixed(1)}%;"></div>
-            </div>
-            <div class="credit-bar-info">
-              <span><strong>${App.formatCurrency(used)}</strong> of ${App.formatCurrency(limit)}</span>
-              <span><strong>${App.formatCurrency(available)}</strong> available</span>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    container.innerHTML = `
-      <div class="section-header" style="margin-top:0;">
-        <span class="section-title">Cards</span>
-      </div>
-      <div class="dash-cards-list">${cardsHtml}</div>
-    `;
-  },
 };
 
 /* ============================================
@@ -8365,6 +8331,16 @@ document.addEventListener('click', (e) => {
   }
 
   // Abrir cartão (página detail)
+  const payCardBtn = e.target.closest('[data-pay-card]');
+  if (payCardBtn) {
+    showPage('cards');
+    Cards.view = 'detail';
+    Cards.selectedCardId = payCardBtn.dataset.payCard;
+    Cards.selectedInvoiceMonth = null;
+    Cards.render();
+    return;
+  }
+
   const openCard = e.target.closest('[data-open-card]');
   if (openCard) {
     Cards.view = 'detail';
