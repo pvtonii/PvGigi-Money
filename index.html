@@ -5292,8 +5292,8 @@ const Transactions = {
             <span class="meta-source">${escapeHtml(sourceLabel)} ${sourceOwnerAvatar}</span>
             ${installmentBadge ? `<span>·</span>${installmentBadge}` : ''}
             ${byBadge ? `<span>·</span>${byBadge}` : ''}
+            ${(t.tags && t.tags.length) ? t.tags.map(tg => `<span>·</span><span class="tx-tag">#${escapeHtml(tg)}</span>`).join('') : ''}
           </div>
-          ${(t.tags && t.tags.length) ? `<div class="tx-tags">${t.tags.map(tg => `<span class="tx-tag">#${escapeHtml(tg)}</span>`).join('')}</div>` : ''}
         </div>
         <div class="tx-amount-block">
           <span class="tx-source-type ${sourceTypeLabel}">${sourceTypeLabel}</span>
