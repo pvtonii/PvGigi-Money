@@ -7532,44 +7532,52 @@ const Dashboard = {
     const projected = liquidBalance - dueThisMonth - pendingRec.accountExpense + pendingRec.income;
 
     const monthStats = this.calcMonthStats();
-    const byOwner = this.calcByOwner();
 
-    // Hero card view mode: 'balance' (default) or 'spending'
-    const viewMode = localStorage.getItem('dashHeroMode') || 'balance';
+    // Hero card cycles: checking → savings → total → spending
+    const viewMode = localStorage.getItem('dashHeroMode') || 'checking';
+
+    const valEl = document.getElementById('dash-today-value');
+    const split = document.getElementById('dash-today-split');
+    valEl.classList.remove('text-success', 'text-danger');
 
     if (viewMode === 'spending') {
-      // Show today's spending: only expenses + external transfers (money leaving)
-      // Ignore income and internal transfers (which net to zero anyway)
       const todayStr = new Date().toISOString().split('T')[0];
       let todaySpending = 0;
       State.transactions.forEach(t => {
         if (t.date !== todayStr) return;
-        // Skip internal transfers (PV ↔ Gigi) — money doesn't leave
         if (t.is_transfer) return;
-        // Skip card payments — already counted when card purchase was made
         if (t.is_payment) return;
-        // Skip income
         if (t.type === 'income') return;
-        // Count: regular expenses AND external transfers (Pix to someone else)
         todaySpending += Number(t.amount) || 0;
       });
       document.getElementById('dash-today-label').textContent = "Today's spending";
-      const valEl = document.getElementById('dash-today-value');
       valEl.textContent = '-' + App.formatCurrency(todaySpending);
-      valEl.classList.remove('text-success', 'text-danger');
       if (todaySpending > 0) valEl.classList.add('text-danger');
-      // Hide the PV/Gigi split (irrelevant in spending mode)
-      const split = document.getElementById('dash-today-split');
       if (split) split.style.display = 'none';
     } else {
-      // 3 cards principais
-      document.getElementById('dash-today-label').textContent = "Today's balance";
-      const valEl = document.getElementById('dash-today-value');
-      valEl.textContent = App.formatCurrency(today);
-      valEl.classList.remove('text-success', 'text-danger');
-      const split = document.getElementById('dash-today-split');
+      let displayBalance, label, ownerFilter;
+      if (viewMode === 'savings') {
+        displayBalance = this.calcSavingsBalance();
+        label = 'Savings balance';
+        ownerFilter = 'savings';
+      } else if (viewMode === 'total') {
+        displayBalance = today;
+        label = 'Total balance';
+        ownerFilter = null;
+      } else {
+        // 'checking' — default
+        displayBalance = liquidBalance;
+        label = 'Checking balance';
+        ownerFilter = 'non-savings';
+      }
+      document.getElementById('dash-today-label').textContent = label;
+      valEl.textContent = App.formatCurrency(displayBalance);
       if (split) split.style.display = '';
+      const byOwner = this.calcByOwner(ownerFilter);
+      document.getElementById('dash-pv-balance').textContent = App.formatCurrency(byOwner.pv);
+      document.getElementById('dash-gigi-balance').textContent = App.formatCurrency(byOwner.gigi);
     }
+
     document.getElementById('dash-due-value').textContent = '-' + App.formatCurrency(dueThisMonth);
     document.getElementById('dash-projected-value').textContent = App.formatCurrency(projected);
 
@@ -7587,10 +7595,6 @@ const Dashboard = {
     // Movimentação do mês
     document.getElementById('dash-income').textContent = '+' + App.formatCurrency(monthStats.income);
     document.getElementById('dash-expense').textContent = '-' + App.formatCurrency(monthStats.expense);
-
-    // Saldo PV / Gigi
-    document.getElementById('dash-pv-balance').textContent = App.formatCurrency(byOwner.pv);
-    document.getElementById('dash-gigi-balance').textContent = App.formatCurrency(byOwner.gigi);
 
     // Upcoming recurrences
     this.renderUpcoming(pendingRec.items);
@@ -7759,8 +7763,7 @@ const Dashboard = {
     return total;
   },
 
-  // Like calcTodayBalance but excludes savings accounts — used for End of Month projection
-  // so that money parked in Savings doesn't inflate the forecast (transfers in/out are intentional)
+  // Checking/cash only — excludes savings (used for EOM projection and Checking Balance view)
   calcLiquidBalance() {
     let total = 0;
     State.accounts.forEach(a => {
@@ -7777,10 +7780,30 @@ const Dashboard = {
     return total;
   },
 
-  calcByOwner() {
+  // Savings accounts only — used for Savings Balance view
+  calcSavingsBalance() {
+    let total = 0;
+    State.accounts.forEach(a => {
+      if (a.type !== 'savings') return;
+      total += Number(a.initial_balance) || 0;
+    });
+    State.transactions.forEach(t => {
+      if (!t.account_id || t.card_id) return;
+      const acc = State.accounts.find(ac => ac.id === t.account_id);
+      if (!acc || acc.type !== 'savings') return;
+      const v = Number(t.amount) || 0;
+      total += (t.type === 'income' ? v : -v);
+    });
+    return total;
+  },
+
+  // typeFilter: null = all accounts, 'savings' = only savings, 'non-savings' = exclude savings
+  calcByOwner(typeFilter = null) {
     const balances = { pv: 0, gigi: 0 };
 
     State.accounts.forEach(a => {
+      if (typeFilter === 'savings' && a.type !== 'savings') return;
+      if (typeFilter === 'non-savings' && a.type === 'savings') return;
       let balance = Number(a.initial_balance) || 0;
       State.transactions.forEach(t => {
         if (t.account_id !== a.id || t.card_id) return;
@@ -7790,8 +7813,6 @@ const Dashboard = {
       if (a.owner === 'pv') balances.pv += balance;
       else if (a.owner === 'gigi') balances.gigi += balance;
       else {
-        // Defensive fallback for any legacy 'shared' or unknown owner: split 50/50
-        // so the total still matches Today's balance.
         balances.pv += balance / 2;
         balances.gigi += balance / 2;
       }
@@ -7938,12 +7959,13 @@ if (categorySelect) {
   });
 }
 
-// Dashboard hero toggle (Today's balance ↔ Today's spending)
+// Dashboard hero toggle: checking → savings → total → spending → checking …
 const heroToggle = document.getElementById('dash-today-toggle');
 if (heroToggle) {
   heroToggle.addEventListener('click', () => {
-    const current = localStorage.getItem('dashHeroMode') || 'balance';
-    const next = current === 'balance' ? 'spending' : 'balance';
+    const modes = ['checking', 'savings', 'total', 'spending'];
+    const current = localStorage.getItem('dashHeroMode') || 'checking';
+    const next = modes[(modes.indexOf(current) + 1) % modes.length];
     localStorage.setItem('dashHeroMode', next);
     Dashboard.render();
   });
