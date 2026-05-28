@@ -2816,10 +2816,17 @@ h1, h2, h3 {
   transition: all var(--duration);
   white-space: nowrap;
 }
-.upcoming-confirm:hover {
+.upcoming-confirm:active {
   background: var(--success);
   color: white;
   border-color: var(--success);
+}
+@media (hover: hover) {
+  .upcoming-confirm:hover {
+    background: var(--success);
+    color: white;
+    border-color: var(--success);
+  }
 }
 
 /* Toast com ação (clicável) */
@@ -3145,7 +3152,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 20 · May 27, 2026</div>
+          <div class="app-version">Version 21 · May 27, 2026</div>
         </div>
       </div>
     </section>
@@ -7942,6 +7949,8 @@ const Dashboard = {
     // Bind confirm buttons
     container.querySelectorAll('[data-confirm-rec]').forEach(btn => {
       btn.addEventListener('click', () => {
+        btn.disabled = true;
+        btn.textContent = '✓';
         confirmRecurrence(btn.dataset.confirmRec);
       });
     });
