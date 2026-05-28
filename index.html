@@ -3135,7 +3135,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 14 · May 27, 2026</div>
+          <div class="app-version">Version 15 · May 27, 2026</div>
         </div>
       </div>
     </section>
@@ -4528,24 +4528,24 @@ const Settings = {
     const sourceLabel = source ? (isCard ? '💳 ' : '🏦 ') + source.name : '— no source';
     const { parent: catParent, child: catChild } = categoryPath(s.category_id);
     const catLabel = catChild?.name || catParent?.name || null;
-    const catIcon = catChild?.icon || catParent?.icon || '';
+    const catIcon = catChild?.icon || catParent?.icon || (s.type === 'income' ? '💰' : '🔁');
     const catColor = catParent?.color || null;
-    const icon = s.type === 'income' ? '💰' : '🔁';
+    const iconStyle = catColor ? `background:${catColor}22;color:${catColor};` : '';
     const inactive = !s.is_active ? ' style="opacity:0.5;"' : '';
 
     return `
       <div class="item-row" data-edit-subscription="${s.id}"${inactive}>
-        <div class="item-icon">${icon}</div>
+        <div class="item-icon" style="${iconStyle}">${catIcon}</div>
         <div class="item-info">
           <div class="item-name">${escapeHtml(s.name)}</div>
           <div class="item-meta">
             <span class="owner-tag ${s.owner}">${this.ownerLabel(s.owner)}</span>
             <span>·</span>
             <span>Day ${s.billing_day}</span>
-            ${catLabel ? `<span>·</span><span class="meta-cat" style="${catColor ? `color:${catColor};` : ''}">${catIcon} ${escapeHtml(catLabel)}</span>` : ''}
             <span>·</span>
             <span>${escapeHtml(sourceLabel)}</span>
           </div>
+          ${catLabel ? `<div class="item-meta" style="margin-top:1px;"><span class="meta-cat" style="${catColor ? `color:${catColor};` : ''}">${catIcon} ${escapeHtml(catLabel)}</span></div>` : ''}
         </div>
         <div class="item-amount ${s.type === 'income' ? 'text-success' : ''}">${s.type === 'income' ? '+' : ''}${App.formatCurrency(s.amount)}</div>
       </div>
