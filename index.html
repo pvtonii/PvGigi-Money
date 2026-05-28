@@ -480,7 +480,7 @@ h1, h2, h3 {
 /* Category group (parent + children) */
 .cat-group { margin-bottom: var(--space-2); }
 .cat-group-parent { border-radius: var(--radius-md) var(--radius-md) 0 0; margin-bottom: 0; border-bottom-color: transparent; }
-.cat-children { margin-left: var(--space-5); display: flex; flex-direction: column; gap: 2px; }
+.cat-children { display: flex; flex-direction: column; }
 .item-row-child { border-radius: 0; border-top: none; }
 .item-row-child:last-child { border-radius: 0 0 var(--radius-md) var(--radius-md); }
 .cat-add-sub-btn {
@@ -3135,7 +3135,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 12 · May 27, 2026</div>
+          <div class="app-version">Version 13 · May 27, 2026</div>
         </div>
       </div>
     </section>
@@ -5930,6 +5930,7 @@ function openTransactionForm(transaction = null) {
     const isSearching = term.length > 0;
 
     if (isSearching) {
+      grid.style.display = '';
       // Flat search across all categories of this type
       const matches = State.categories.filter(c =>
         c.type === selectedType && (c.name || '').toLowerCase().includes(term)
@@ -5948,9 +5949,10 @@ function openTransactionForm(transaction = null) {
       }).join('');
     } else {
       // Hierarchical mode
+      grid.style.display = 'block';
       const parents = parentCategories(selectedType);
       if (!parents.length) {
-        grid.innerHTML = `<div style="grid-column:1/-1;font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No ${selectedType} categories.</div>`;
+        grid.innerHTML = `<div style="font-size:0.8125rem;color:var(--text-tertiary);text-align:center;padding:var(--space-3);">No ${selectedType} categories.</div>`;
         return;
       }
       // Auto-expand parent of the currently-selected category
