@@ -1909,6 +1909,12 @@ h1, h2, h3 {
   background: var(--bg-tertiary);
   border-color: var(--border-default);
 }
+/* Transações do mesmo dia coladas */
+.tx-day-rows { display: flex; flex-direction: column; }
+.tx-day-rows .tx-row { margin-bottom: 0; border-radius: 0; border-top-color: transparent; }
+.tx-day-rows .tx-row:first-child { border-radius: var(--radius-md) var(--radius-md) 0 0; border-top-color: var(--border-subtle); }
+.tx-day-rows .tx-row:last-child { border-radius: 0 0 var(--radius-md) var(--radius-md); }
+.tx-day-rows .tx-row:first-child:last-child { border-radius: var(--radius-md); }
 .tx-icon {
   width: 40px; height: 40px;
   border-radius: var(--radius-md);
@@ -3139,7 +3145,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 17 · May 27, 2026</div>
+          <div class="app-version">Version 18 · May 27, 2026</div>
         </div>
       </div>
     </section>
@@ -5416,7 +5422,7 @@ const Transactions = {
             </div>
             <span class="day-total ${totalClass}">${dayTotal === 0 ? '—' : totalSign + App.formatCurrency(dayTotal)}</span>
           </div>
-          ${visibleTxs.map(t => this.txRow(t)).join('')}
+          <div class="tx-day-rows">${visibleTxs.map(t => this.txRow(t)).join('')}</div>
         </div>
       `;
     }).join('');
