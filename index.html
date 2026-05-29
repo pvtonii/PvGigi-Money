@@ -1050,6 +1050,25 @@ input[type="date"].form-input { -webkit-appearance: none; appearance: none; }
   padding: var(--space-4);
   margin-bottom: var(--space-3);
 }
+.report-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.report-row:last-child { margin-bottom: 0; }
+.report-label { font-size: 0.8125rem; font-weight: 500; min-width: 48px; }
+.report-bar-wrap { flex: 1; }
+.report-bar-track { height: 6px; background: var(--bg-tertiary); border-radius: 99px; overflow: hidden; }
+.report-bar-fill { height: 100%; border-radius: 99px; transition: width 0.4s var(--ease-out); }
+.report-bar-fill.pv   { background: var(--pv-color); }
+.report-bar-fill.gigi { background: var(--gigi-color); }
+.report-bar-fill.card { background: var(--text-secondary); }
+.report-amount { font-size: 0.8125rem; font-variant-numeric: tabular-nums; color: var(--text-secondary); min-width: 64px; text-align: right; }
+.report-card-row { display: flex; justify-content: space-between; align-items: center; padding: var(--space-2) 0; border-bottom: 1px solid var(--border-subtle); }
+.report-card-row:last-child { border-bottom: none; padding-bottom: 0; }
+.report-card-name { font-size: 0.8125rem; font-weight: 500; }
+.report-card-amt  { font-size: 0.8125rem; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
 .insights-section-title {
   font-size: 0.6875rem;
   font-weight: 500;
@@ -3178,7 +3197,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 32 · May 28, 2026</div>
+          <div class="app-version">Version 33 · May 29, 2026</div>
         </div>
       </div>
     </section>
@@ -7046,14 +7065,108 @@ async function confirmRecurrence(subscriptionId) {
  * INSIGHTS — analytics dashboard (% income spent, top categories, 6-month bars, weekday heatmap)
  * ============================================ */
 const Insights = {
+  reportMonth: (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); })(),
+
   render() {
     const container = document.getElementById('insights-page-content');
     if (!container) return;
     container.innerHTML = `
+      ${this.renderMonthlyReport()}
       ${this.renderIncomeUsage()}
       ${this.renderTopCategories()}
       ${this.renderMonthlyComparison()}
       ${this.renderWeekdayHeatmap()}
+    `;
+    this.updateReportNav();
+  },
+
+  updateReportNav() {
+    const nav = document.getElementById('insights-month-nav');
+    if (!nav) return;
+    const label = nav.querySelector('.month-label');
+    if (!label) return;
+    const [y, m] = this.reportMonth.split('-').map(Number);
+    label.textContent = new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  },
+
+  renderMonthlyReport() {
+    const ym = this.reportMonth;
+    const txs = this.txsInMonth(ym).filter(t => !t.is_transfer && !t.is_payment && !t.is_refund);
+
+    const spending = txs.filter(t => t.type === 'expense');
+    const pvTotal   = spending.filter(t => t.owner === 'pv').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    const gigiTotal = spending.filter(t => t.owner === 'gigi').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    const ownerMax  = Math.max(pvTotal, gigiTotal, 0.01);
+
+    // Categories (parent-level, same logic as renderTopCategories)
+    const catMap = {};
+    spending.forEach(t => {
+      const { parent } = categoryPath(t.category_id);
+      if (!parent) return;
+      catMap[parent.id] = catMap[parent.id] || { cat: parent, total: 0 };
+      catMap[parent.id].total += Number(t.amount) || 0;
+    });
+    const catRows = Object.values(catMap).sort((a, b) => b.total - a.total).slice(0, 6);
+    const catMax = catRows.length ? catRows[0].total : 0.01;
+
+    // Cards
+    const cardMap = {};
+    spending.filter(t => t.card_id).forEach(t => {
+      const card = State.cards.find(c => c.id === t.card_id);
+      if (!card) return;
+      cardMap[card.id] = cardMap[card.id] || { name: card.name, total: 0 };
+      cardMap[card.id].total += Number(t.amount) || 0;
+    });
+    const cardRows = Object.values(cardMap).sort((a, b) => b.total - a.total);
+
+    const [y, m] = ym.split('-').map(Number);
+    const monthLabel = new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    return `
+      <div class="insights-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
+          <div class="insights-section-title" style="margin-bottom:0;">Monthly Report</div>
+          <div class="tx-month-nav" id="insights-month-nav" style="background:var(--bg-tertiary);border:1px solid var(--border-subtle);">
+            <button data-insights-month-prev>‹</button>
+            <span class="month-label" style="font-size:0.6875rem;font-weight:600;padding:var(--space-2) var(--space-1);min-width:90px;text-align:center;cursor:default;">${monthLabel}</span>
+            <button data-insights-month-next>›</button>
+          </div>
+        </div>
+
+        <div class="insights-section-title" style="margin-top:var(--space-2);">Spending by person</div>
+        ${pvTotal === 0 && gigiTotal === 0 ? `<div style="font-size:0.8125rem;color:var(--text-tertiary);">No expenses this month.</div>` : `
+          <div class="report-row">
+            <div class="report-label">PV</div>
+            <div class="report-bar-wrap"><div class="report-bar-track"><div class="report-bar-fill pv" style="width:${(pvTotal/ownerMax*100).toFixed(1)}%;"></div></div></div>
+            <div class="report-amount">${App.formatCurrency(pvTotal)}</div>
+          </div>
+          <div class="report-row">
+            <div class="report-label">Gigi</div>
+            <div class="report-bar-wrap"><div class="report-bar-track"><div class="report-bar-fill gigi" style="width:${(gigiTotal/ownerMax*100).toFixed(1)}%;"></div></div></div>
+            <div class="report-amount">${App.formatCurrency(gigiTotal)}</div>
+          </div>
+        `}
+
+        <div class="insights-section-title" style="margin-top:var(--space-4);">By category</div>
+        ${catRows.length === 0 ? `<div style="font-size:0.8125rem;color:var(--text-tertiary);">No categorized expenses.</div>` : catRows.map(({ cat, total }) => `
+          <div class="report-row">
+            <div class="report-label" style="min-width:28px;">${cat.icon || '•'}</div>
+            <div class="report-bar-wrap">
+              <div style="font-size:0.75rem;margin-bottom:2px;">${escapeHtml(cat.name)}</div>
+              <div class="report-bar-track"><div class="report-bar-fill" style="width:${(total/catMax*100).toFixed(1)}%;background:${cat.color || 'var(--text-secondary)'};"></div></div>
+            </div>
+            <div class="report-amount">${App.formatCurrency(total)}</div>
+          </div>`).join('')}
+
+        ${cardRows.length > 0 ? `
+          <div class="insights-section-title" style="margin-top:var(--space-4);">By card</div>
+          ${cardRows.map(({ name, total }) => `
+            <div class="report-card-row">
+              <div class="report-card-name">💳 ${escapeHtml(name)}</div>
+              <div class="report-card-amt">${App.formatCurrency(total)}</div>
+            </div>`).join('')}
+        ` : ''}
+      </div>
     `;
   },
 
@@ -8552,6 +8665,19 @@ document.addEventListener('click', (e) => {
   }
 
   // Month navigation
+  if (e.target.closest('[data-insights-month-prev]')) {
+    const [y, m] = Insights.reportMonth.split('-').map(Number);
+    const prev = new Date(y, m - 2, 1);
+    Insights.reportMonth = prev.getFullYear() + '-' + String(prev.getMonth() + 1).padStart(2, '0');
+    Insights.render(); return;
+  }
+  if (e.target.closest('[data-insights-month-next]')) {
+    const [y, m] = Insights.reportMonth.split('-').map(Number);
+    const next = new Date(y, m, 1);
+    Insights.reportMonth = next.getFullYear() + '-' + String(next.getMonth() + 1).padStart(2, '0');
+    Insights.render(); return;
+  }
+
   if (e.target.closest('[data-month-prev]')) {
     const cur = Transactions.filterMonth;
     if (cur === 'all') {
