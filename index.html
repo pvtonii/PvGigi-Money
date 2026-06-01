@@ -2980,6 +2980,11 @@ html { scroll-behavior: smooth; }
 </div>
 
 <!-- APP -->
+<div id="app-loading-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg-primary);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-4);">
+  <div style="font-size:2.5rem;">💰</div>
+  <div style="width:32px;height:32px;border:3px solid var(--border-default);border-top-color:var(--text-primary);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+</div>
+
 <div class="screen" id="screen-app">
   <header class="app-header fade-in">
     <div class="header-title-wrap">
@@ -3197,7 +3202,7 @@ html { scroll-behavior: smooth; }
           <p class="conn-footer-text">
             Credentials are stored on your device (localStorage). They aren't sent anywhere except Supabase.
           </p>
-          <div class="app-version">Version 33 · May 29, 2026</div>
+          <div class="app-version">Version 34 · May 29, 2026</div>
         </div>
       </div>
     </section>
@@ -3611,9 +3616,37 @@ const Auth = {
    DATA
    ============================================ */
 const Data = {
+  _cacheKey: 'finance_data_cache',
+
+  saveCache() {
+    try {
+      localStorage.setItem(this._cacheKey, JSON.stringify({
+        categories: State.categories,
+        accounts: State.accounts,
+        cards: State.cards,
+        transactions: State.transactions,
+        subscriptions: State.subscriptions,
+      }));
+    } catch (e) { /* storage full — ignore */ }
+  },
+
+  loadCache() {
+    try {
+      const raw = localStorage.getItem(this._cacheKey);
+      if (!raw) return false;
+      const c = JSON.parse(raw);
+      State.categories = c.categories || [];
+      State.accounts = c.accounts || [];
+      State.cards = c.cards || [];
+      State.transactions = c.transactions || [];
+      State.subscriptions = c.subscriptions || [];
+      return true;
+    } catch (e) { return false; }
+  },
+
   async loadAll() {
     if (!db) return;
-    Status.set('syncing', 'Loading data…');
+    Status.set('syncing', 'Refreshing…');
     try {
       const [cats, accs, crds, txs, subs] = await Promise.all([
         db.from('categories').select('*').order('name'),
@@ -3632,6 +3665,7 @@ const Data = {
       State.cards = crds.data || [];
       State.transactions = txs.data || [];
       State.subscriptions = subs.data || [];
+      this.saveCache();
       Status.set('connected', `${State.transactions.length} transactions · ${State.cards.length} cards`);
     } catch (e) {
       console.error(e);
@@ -4495,16 +4529,37 @@ async function enterApp() {
   showScreen('app');
   App.renderUserBadge();
 
-  if (Connection.isConfigured()) {
-    if (initSupabaseClient()) {
-      const ok = await testConnection();
-      if (ok) {
-        await Data.loadAll();
-        Dashboard.render();
-      }
+  if (!Connection.isConfigured()) {
+    Status.set('disconnected', 'Set up Supabase in Settings');
+    return;
+  }
+
+  if (!initSupabaseClient()) return;
+
+  const hasCached = Data.loadCache();
+  const overlay = document.getElementById('app-loading-overlay');
+
+  if (hasCached) {
+    // Show cached data immediately — no spinner
+    Dashboard.render();
+    // Then refresh silently in background
+    const ok = await testConnection();
+    if (ok) {
+      await Data.loadAll();
+      Dashboard.render();
+      if (document.getElementById('page-transactions').classList.contains('active')) Transactions.render();
+      if (document.getElementById('page-cards').classList.contains('active')) Cards.render();
+      if (document.getElementById('page-insights').classList.contains('active')) Insights.render();
     }
   } else {
-    Status.set('disconnected', 'Set up Supabase in Settings');
+    // First load — show spinner until data arrives
+    if (overlay) overlay.style.display = 'flex';
+    const ok = await testConnection();
+    if (ok) {
+      await Data.loadAll();
+      Dashboard.render();
+    }
+    if (overlay) overlay.style.display = 'none';
   }
 }
 
